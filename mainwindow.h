@@ -15,6 +15,15 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+signals:
+    void openConnDiag();
+
+public slots:
+    void connected();
+    void disconnected();
+    void connectionFailed(QString errorMsg);
+
+
 private:
     Ui::MainWindow *ui;
 };
