@@ -1,15 +1,19 @@
 #ifndef BTLESERIAL_H
 #define BTLESERIAL_H
 #include <QObject>
-#include <QLowEnergyController>
 #include <QString>
+#include <string>
+
+#include "blepp/logging.h"
+#include "blepp/pretty_printers.h"
+#include "blepp/blestatemachine.h"
+#include "blepp/lescan.h"
 
 class BtleSerial : public QObject
 {
     Q_OBJECT
 private:
-    QLowEnergyController* _telemetrySystem = nullptr;
-    QLowEnergyService*    _nusService      = nullptr;
+    BLEPP::BLEGATTStateMachine _telemetrySystem;
 
     bool _foundNusService = false;
 
@@ -21,20 +25,20 @@ private:
     void reset();
 
 signals:
-    void connectionFailed(QString errorMsg);
+    void disconnected(QString message);
     void connected();
-    void disconnected();
     void recived(const QByteArray &value);
 
 public slots:
-    void connectTo(const QBluetoothDeviceInfo info);
+    void connectTo(const BLEPP::AdvertisingResponse info);
+    void connectToAdress(const std::string adress);
 
 private slots:
-    void btError(QLowEnergyController::Error error);
-    void serviceFound(const QBluetoothUuid &uuid);
+   // void btError(QLowEnergyController::Error error);
+    void serviceFound();
     void serviceScanFinished();
 
-    void characteristicChange(const QLowEnergyCharacteristic &c, const QByteArray &data);
+    void characteristicChange(const BLEPP::PDUNotificationOrIndication& notification);
 };
 
 #endif // BTLESERIAL_H
