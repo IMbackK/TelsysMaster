@@ -30,9 +30,7 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     connectiondialog.cpp \
-    btleserial.cpp \
-    blepp/att_pdu.cc blepp/att.cc blepp/bledevice.cc blepp/blestatemachine.cc blepp/float.cc blepp/lescan.cc blepp/logging.cc blepp/pretty_printers.cc blepp/uuid.cc
-
+    btleserial.cpp
 HEADERS += \
         mainwindow.h \
     connectiondialog.h \
