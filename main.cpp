@@ -33,13 +33,9 @@ int main(int argc, char *argv[])
 
     qDebug()<<"Printing Debug\n";
 
-    btle.connectToAdress("f1:ce:4d:8e:2f:6a");
-
-    /*MainWindow w;
-
-
-
-
+    btle.connectToAdress("04:69:F8:AB:49:E6");
+/*
+    MainWindow w;
 
     QObject::connect(&w, &MainWindow::openConnDiag, [&btle](){selectDeviceToConnect(&btle);});
 
@@ -49,6 +45,6 @@ int main(int argc, char *argv[])
 
     w.show();
 
-    return a.exec();*/
-    return 0;
+    return a.exec();
+    //return 0;*/
 }
