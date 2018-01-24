@@ -3,6 +3,8 @@
 
 #include <QMessageBox>
 #include <QDebug>
+#include <QListWidgetItem>
+
 
 #include <unistd.h>
 
@@ -18,24 +20,19 @@
 #include "blepp/blestatemachine.h"
 #include "blepp/lescan.h"
 
-ConnectionDialog::ConnectionDialog(QWidget *parent) :
+ConnectionDialog::ConnectionDialog(BleScanner* discoverer, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ConnectionDialog),
-    _discoverer()
+    _discoverer(discoverer)
 {
     ui->setupUi(this);
 
-    connect(ui->pushButton_scann, &QPushButton::clicked, this, [this](){this->scann();});
-
+    connect(ui->pushButton_scann, &QPushButton::clicked, this, [this](){this->toggleScann();});
+    connect(_discoverer, &BleScanner::discoverdDevice, this, &ConnectionDialog::deviceFound);
 }
 
 ConnectionDialog::~ConnectionDialog()
 {
-    if(_timer != nullptr)
-    {
-        _timer->stop();
-        delete _timer;
-    }
     ui->listWidget->clear();
     _discoverdDevices.clear();
     delete ui;
@@ -57,75 +54,37 @@ void ConnectionDialog::accept()
     else
     {
         int index = ui->listWidget->row(ui->listWidget->selectedItems()[0]);
-         _discoverer.stop();
+         _discoverer->stop();
         deviceSelected(_discoverdDevices[index]);
         done(0);
     }
 }
 
-void ConnectionDialog::scanloop()
+void ConnectionDialog::deviceFound(const BleDiscoveredDevice info)
 {
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 30000;
-
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(_discoverer.get_fd(), &fds);
-    int err = select(_discoverer.get_fd()+1, &fds, NULL, NULL,  &timeout);
-
-    if(FD_ISSET(_discoverer.get_fd(), &fds))
-    {
-        //Only read id there's something to read
-        std::vector<BLEPP::AdvertisingResponse> tmpFoundDevices = _discoverer.get_advertisements();
-
-        for(unsigned int i = 0; i < tmpFoundDevices.size(); i++)
-        {
-            qDebug()<<"Found a device: "<<QString::fromStdString(tmpFoundDevices[i].address)<<'\n';
-
-            if(tmpFoundDevices[i].type == BLEPP::LeAdvertisingEventType::ADV_IND || tmpFoundDevices[i].type == BLEPP::LeAdvertisingEventType::ADV_IND )
-            {
-                qDebug()<<"Is connectable.\n";
-                for(unsigned int j = 0; j < tmpFoundDevices[i].UUIDs.size(); j++)
-                {
-                    qDebug()<<"Has service with UUID: "<<BLEPP::to_str(tmpFoundDevices[i].UUIDs[j]).c_str()<<'\n';
-                }
-                _discoverdDevices.push_back(tmpFoundDevices[i]);
-                new QListWidgetItem(QString::fromStdString(tmpFoundDevices[i].address), ui->listWidget);
-            }
-        }
-    }
+    _discoverdDevices.push_back(info);
+    new QListWidgetItem(info.name, ui->listWidget);
 }
 
-void ConnectionDialog::scanningFinished()
+void ConnectionDialog::stopScan()
 {
-    if(_timer != nullptr)
-    {
-        _timer->stop();
-        delete _timer;
-        _timer=nullptr;
-    }
-    ui->label_Scanning->setText("Scanning Finished");
+    _discoverer->stop();
+    ui->label_Scanning->setText("Scanning Stopped");
+    ui->pushButton_scann->setText("Scann");
 }
 
-void ConnectionDialog::scann()
+void ConnectionDialog::toggleScann()
 {
-
-    if(_timer != nullptr)
+    if(_discoverer->getScanning())
     {
-        _timer->stop();
-        delete _timer;
+        stopScan();
     }
-    _discoverer.stop();
-
-    ui->listWidget->clear();
-    _discoverdDevices.clear();
-
-    _discoverer.start();
-    ui->label_Scanning->setText("Scanning");
-    _timer = new QTimer();
-    connect(_timer, &QTimer::timeout, this, &ConnectionDialog::scanloop);
-    _timer->setSingleShot(false);
-    _timer->setTimerType(Qt::PreciseTimer);
-    _timer->start(5);
+    else
+    {
+        ui->listWidget->clear();
+        _discoverdDevices.clear();
+        _discoverer->start();
+        ui->pushButton_scann->setText("Stop");
+        ui->label_Scanning->setText("Scanning...");
+    }
 }

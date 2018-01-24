@@ -24,17 +24,21 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-LIBS +=-lbluetooth
-
+LIBS += -L./ -l:libgattlib.so --verbose
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
     connectiondialog.cpp \
-    btleserial.cpp
+    blescanner.cpp \
+    bleserial.cpp \
+    sampleparser.cpp
 HEADERS += \
         mainwindow.h \
     connectiondialog.h \
-    btleserial.h
+    blescanner.h \
+    gattlib.h \
+    bleserial.h \
+    sampleparser.h
 
 FORMS += \
         mainwindow.ui \

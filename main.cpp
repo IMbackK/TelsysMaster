@@ -6,16 +6,18 @@
 #include <QDebug>
 #include <QLoggingCategory>
 
-#include "blepp/logging.h"
+#include "bleserial.h"
+#include "blescanner.h"
+#include "gattlib.h"
 
-#include "btleserial.h"
 
-
-void selectDeviceToConnect(BtleSerial* blte)
+void selectDeviceToConnect(void* blteDevice, BleSerial* bleSerial)
 {
-    ConnectionDialog conDiag;
 
-    QObject::connect(&conDiag, &ConnectionDialog::deviceSelected, blte, &BtleSerial::connectTo);
+    BleScanner scanner(blteDevice);
+    ConnectionDialog conDiag(&scanner);
+
+    QObject::connect(&conDiag, &ConnectionDialog::deviceSelected, bleSerial, &BleSerial::connectTo);
 
     conDiag.show();
     conDiag.exec();
@@ -25,23 +27,23 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    //QLoggingCategory::setFilterRules("*.debug=false\n" "qt.bluetooth.bluez.debug=true\n" "qt.bluetooth.debug=true");
+    void* blteDevice;
+    int errorCode = gattlib_adapter_open(NULL, &blteDevice);
+    if (errorCode)
+    {
+        QMessageBox::critical(nullptr, "Error", "No active BLTE Adapter Detected.", QMessageBox::Ok);
+        return -1;
+    }
 
-    BtleSerial btle;
+    BleSerial bleSerial(blteDevice);
 
-    BLEPP::log_level = BLEPP::LogLevels::Info;
-
-    qDebug()<<"Printing Debug\n";
-
-    btle.connectToAdress("04:69:F8:AB:49:E6");
-/*
     MainWindow w;
 
-    QObject::connect(&w, &MainWindow::openConnDiag, [&btle](){selectDeviceToConnect(&btle);});
+    QObject::connect(&w, &MainWindow::openConnDiag, [&blteDevice, &bleSerial](){selectDeviceToConnect(&blteDevice, &bleSerial);});
 
-    QObject::connect(&btle, &BtleSerial::connected, &w, &MainWindow::connected);
-    //QObject::connect(&btle, &BtleSerial::disconnected, &w, &MainWindow::disconnected);
-    QObject::connect(&btle, &BtleSerial::disconnected, &w, &MainWindow::connectionFailed);
+    QObject::connect(&bleSerial, &BleSerial::connected, &w, &MainWindow::connected);
+    //QObject::connect(&bleSerial, &BleSerial::disconnected, &w, &MainWindow::disconnected);
+    QObject::connect(&bleSerial, &BleSerial::disconnected, &w, &MainWindow::connectionFailed);
 
     w.show();
 
