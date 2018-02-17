@@ -25,6 +25,7 @@ public:
 public slots:
     void toggleScann();
     void stopScan();
+
     void deviceFound(const BleDiscoveredDevice info);
     void accept();
     void reject();
@@ -32,6 +33,9 @@ public slots:
 signals:
     void deviceSelected(const BleDiscoveredDevice info);
 
+
+private slots:
+    void scannFinished();
 
 private:
     Ui::ConnectionDialog *ui;

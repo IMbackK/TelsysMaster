@@ -29,6 +29,7 @@ ConnectionDialog::ConnectionDialog(BleScanner* discoverer, QWidget *parent) :
 
     connect(ui->pushButton_scann, &QPushButton::clicked, this, [this](){this->toggleScann();});
     connect(_discoverer, &BleScanner::discoverdDevice, this, &ConnectionDialog::deviceFound);
+    connect(_discoverer, &BleScanner::finishedScanning, this, &ConnectionDialog::scannFinished);
 }
 
 ConnectionDialog::~ConnectionDialog()
@@ -47,29 +48,56 @@ void ConnectionDialog::reject()
 
 void ConnectionDialog::accept()
 {
-    if(ui->listWidget->selectedItems().size() != 1)
+    if(ui->listWidget->selectedItems().size() != 1 && ui->lineEdit->text().isEmpty() )
     {
-        QMessageBox::warning(this, "Info", "Please Select a device.", QMessageBox::Ok);
+        QMessageBox::warning(this, "Info", "Please Select a device or input a valid custom address.", QMessageBox::Ok);
     }
     else
     {
-        int index = ui->listWidget->row(ui->listWidget->selectedItems()[0]);
-         _discoverer->stop();
-        deviceSelected(_discoverdDevices[index]);
+        if(ui->listWidget->selectedItems().size() == 1)
+        {
+            int index = ui->listWidget->row(ui->listWidget->selectedItems()[0]);
+             _discoverer->stop();
+            deviceSelected(_discoverdDevices[index]);
+
+        }
+        else
+        {
+            BleDiscoveredDevice device(ui->lineEdit->text(), "Custom Device");
+            _discoverer->stop();
+            deviceSelected(device);
+        }
         done(0);
     }
 }
 
+
 void ConnectionDialog::deviceFound(const BleDiscoveredDevice info)
 {
     _discoverdDevices.push_back(info);
-    new QListWidgetItem(info.name, ui->listWidget);
+
+    QString itemString;
+
+    if(!info.name.isEmpty())
+    {
+        itemString =info.name;
+        itemString.append("    Addr: ");
+        itemString.append(info.address);
+    }
+    else itemString = info.address;
+    new QListWidgetItem(itemString, ui->listWidget);
 }
 
 void ConnectionDialog::stopScan()
 {
     _discoverer->stop();
-    ui->label_Scanning->setText("Scanning Stopped");
+    scannFinished();
+}
+
+
+void ConnectionDialog::scannFinished()
+{
+    ui->label_Scanning->setText("Scanning Finished");
     ui->pushButton_scann->setText("Scann");
 }
 

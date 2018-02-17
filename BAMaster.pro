@@ -4,11 +4,9 @@
 #
 #-------------------------------------------------
 
-QT       += core gui bluetooth
+QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
-
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 TARGET = BAMaster
 TEMPLATE = app
@@ -19,27 +17,43 @@ TEMPLATE = app
 # deprecated API in order to know how to port your code away from it.
 DEFINES += QT_DEPRECATED_WARNINGS
 
+DEFINES += QCUSTOMPLOT_USE_OPENGL
+
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 LIBS += -L./ -l:libgattlib.so --verbose
+
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
     connectiondialog.cpp \
     blescanner.cpp \
     bleserial.cpp \
-    sampleparser.cpp
+    sampleparser.cpp\
+    qcustomplot/qcustomplot.cpp \
+    limitdialog.cpp \
+    callibrationdialog.cpp \
+    replotdiag.cpp
+
 HEADERS += \
         mainwindow.h \
     connectiondialog.h \
     blescanner.h \
     gattlib.h \
     bleserial.h \
-    sampleparser.h
+    sampleparser.h\
+    point3D.h \
+    qcustomplot/qcustomplot.h \
+    limitdialog.h \
+    callibrationdialog.h \
+    replotdiag.h
 
 FORMS += \
         mainwindow.ui \
-    connectiondialog.ui
+    connectiondialog.ui \
+    limitdialog.ui \
+    callibrationdialog.ui \
+    replotdiag.ui

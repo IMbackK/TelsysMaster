@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ConnectionDialog</class>
- <widget class="QDialog" name="ConnectionDialog">
+ <class>ReplotDiag</class>
+ <widget class="QDialog" name="ReplotDiag">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>660</width>
-    <height>462</height>
+    <width>402</width>
+    <height>119</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Connect</string>
+   <string>Dialog</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -19,64 +19,30 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Choose device to connect to:</string>
+        <string>Replot from sample </string>
        </property>
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
+      <widget class="QSpinBox" name="spinBox_from"/>
      </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_scann">
-       <property name="text">
-        <string>Scan</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QListWidget" name="listWidget"/>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <property name="topMargin">
-      <number>0</number>
-     </property>
      <item>
       <widget class="QLabel" name="label_2">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="text">
-        <string>Custom Device Address: </string>
+        <string>to</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEdit"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="label_Scanning">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      <widget class="QSpinBox" name="spinBox_to">
+       <property name="minimum">
+        <number>1</number>
        </property>
       </widget>
      </item>
@@ -99,7 +65,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>ConnectionDialog</receiver>
+   <receiver>ReplotDiag</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -115,7 +81,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>ConnectionDialog</receiver>
+   <receiver>ReplotDiag</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

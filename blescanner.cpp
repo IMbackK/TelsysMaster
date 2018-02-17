@@ -2,6 +2,8 @@
 
 #include "blescanner.h"
 #include "gattlib.h"
+#include <QThread>
+#include <QCoreApplication>
 
 //WARNING: HACK
 //regretably user data support for scanning is not supported by gattlib at this time.
@@ -20,11 +22,17 @@ BleScanner::~BleScanner()
 
 void BleScanner::start()
 {
-    isScanning = true;
-    if(gattlib_adapter_scan_enable(_adapter, &discoverdDeviceCallback,  BLE_SCAN_TIMEOUT))
-    {
-        qDebug()<<"Failed To enable Scanner\n";
-    }
+    qRegisterMetaType<BleDiscoveredDevice>();
+    _scannThread = QThread::create([this](){gattlib_adapter_scan_enable(this->_adapter, &BleScanner::discoverdDeviceCallback,  BLE_SCAN_TIMEOUT);});
+    connect(_scannThread, &QThread::finished, this, &BleScanner::scanningThreadFinished);
+    _scannThread->start();
+}
+
+void BleScanner::scanningThreadFinished()
+{
+    finishedScanning();
+    delete _scannThread;
+    _scannThread = nullptr;
 }
 
 bool BleScanner::getScanning()
@@ -34,10 +42,9 @@ bool BleScanner::getScanning()
 
 void BleScanner::stop()
 {
-    if(isScanning)
+    if( _scannThread != nullptr )
     {
-        isScanning = false;
-        gattlib_adapter_scan_disable(_adapter);
+       while (_scannThread->isRunning() )QCoreApplication::processEvents();
     }
 }
 
