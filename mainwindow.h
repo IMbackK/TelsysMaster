@@ -35,6 +35,8 @@ signals:
     void sigOpenCalDiag();
     void sigReplot(unsigned from, unsigned to);
     void sigRecalOfset();
+    void sigSetRate(int rate);
+
 
 public slots:
     void deviceConnected();
@@ -45,6 +47,7 @@ public slots:
     void setListViewPointLimit(int in);
     void setGraphLimit(double in);
     void newAdcSample(AdcSample sample, int amountNowStored);
+    void showRateDialog();
 
 private slots:
 

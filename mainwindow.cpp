@@ -12,6 +12,7 @@
 #include "qcustomplot/qcustomplot.h"
 
 #include "limitdialog.h"
+#include "ratedialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -30,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionCalibration, &QAction::triggered, this, &MainWindow::sigOpenCalDiag);
     connect(ui->actionReplot, &QAction::triggered, this, &MainWindow::replot);
     connect(ui->actionRecalibrate_Offset, &QAction::triggered, this, &MainWindow::sigRecalOfset);
+    connect(ui->actionRates, &QAction::triggered, this, &MainWindow::showRateDialog);
 
 
     //buttons
@@ -158,6 +160,16 @@ void MainWindow::showLimitDialog()
 
     limitDialog.show();
     limitDialog.exec();
+}
+
+void MainWindow::showRateDialog()
+{
+    RateDialog rateDialog(this);
+    rateDialog.show();
+    if(rateDialog.exec() == 0)
+    {
+        sigSetRate(rateDialog.getRate());
+    }
 }
 
 void MainWindow::savePdf()

@@ -8,12 +8,12 @@ ReplotDiag::ReplotDiag(unsigned maxVal, QWidget *parent) :
     ui->setupUi(this);
     ui->spinBox_from->setMaximum(maxVal);
     ui->spinBox_to->setMaximum(maxVal);
+    ui->spinBox_to->setValue(maxVal);
     setFixedSize(size());
 }
 
 void ReplotDiag::accept()
 {
-
     done(0);
 }
 

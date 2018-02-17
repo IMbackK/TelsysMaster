@@ -36,7 +36,8 @@ SOURCES += \
     qcustomplot/qcustomplot.cpp \
     limitdialog.cpp \
     callibrationdialog.cpp \
-    replotdiag.cpp
+    replotdiag.cpp \
+    ratedialog.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -49,11 +50,13 @@ HEADERS += \
     qcustomplot/qcustomplot.h \
     limitdialog.h \
     callibrationdialog.h \
-    replotdiag.h
+    replotdiag.h \
+    ratedialog.h
 
 FORMS += \
         mainwindow.ui \
     connectiondialog.ui \
     limitdialog.ui \
     callibrationdialog.ui \
-    replotdiag.ui
+    replotdiag.ui \
+    ratedialog.ui

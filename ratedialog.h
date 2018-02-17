@@ -15,6 +15,12 @@ public:
     explicit RateDialog(QWidget *parent = 0);
     ~RateDialog();
 
+    int getRate();
+
+public slots:
+    void accept();
+    void reject();
+
 private:
     Ui::RateDialog *ui;
 };

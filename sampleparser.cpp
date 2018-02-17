@@ -7,11 +7,6 @@
 #include <QStringList>
 #include <QCoreApplication>
 
-#define SAMPLE_PARSER_NO_PAKET  0
-#define SAMPLE_PARSER_ADC_PAKET 1
-#define SAMPLE_PARSER_AUX_PAKET 2
-#define SAMPLE_PARSER_ADC_PAKET_SIGNATURE 0x4587AD75
-#define SAMPLE_PARSER_AUX_PAKET_SIGNATURE 0x4587AD76
 #define SAMPLE_PARSER_PAKET_END_SIGNATURE 0xFFFF
 
 SampleParser::SampleParser(QObject *parent) : QObject(parent){}
@@ -45,62 +40,31 @@ void SampleParser::resendRange(unsigned int from, unsigned int to)
 
 void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
 {
-    if(_expectedCount < 0 && length > 3)
+    if(length > 3)
     {
-        _expectedCount = data[0];
-        _totalCount = _expectedCount;
-        _currentDelta = toEquivalentUint16(data+1);
-        qDebug()<<data[0]<<','<<data[1]<<','<<data[2];
-    }
-    for(size_t i = 3; i < length; i+=2)
-    {
-        if( i + 2 < length && _expectedCount > 0)
+        int expectedCount = data[0];
+        uint_fast8_t totalCount = expectedCount;
+        uint16_t currentDelta = toEquivalentUint16(data+1);
+
+        for(size_t i = 3; i + 2 < length && expectedCount > 0; i+=2)
         {
             AdcSample tmp;
             tmp.value = toEquivalentUint16(data+i);
-            tmp.deltaTime = _currentDelta/_totalCount;
+            tmp.deltaTime = currentDelta/totalCount;
             tmp.id = _currentAdcSampleId;
 
-            tmp.timeStamp=timeStampHead + tmp.deltaTime*(_totalCount-_expectedCount);
+            tmp.timeStamp=timeStampHead + tmp.deltaTime*(totalCount-expectedCount);
             tmp.value = tmp.value*_offset;
 
             if(adcSamples.size() > sampleCountLimit) adcSamples.erase(adcSamples.begin()); //limit samples
             adcSamples.push_back(tmp);
             gotAdcSample(tmp, adcSamples.size());
 
-            _expectedCount--;
+            expectedCount--;
             _currentAdcSampleId++;
         }
-        else if(i + 1 < length && data[i] == 0xFF &&  _expectedCount == 0)
-        {
-            _currentPaketType = SAMPLE_PARSER_NO_PAKET;
-            timeStampHead = timeStampHead+_currentDelta;
-            _totalCount = 0;
-            _currentDelta = 0;
-            _expectedCount = -1;
-        }
-        qDebug()<<length<<i<<','<<data[i];
-    }
-}
-
-void SampleParser::newData(const uint8_t *data, size_t length)
-{
-    if(length > 4)
-    {
-        size_t i = 0;
-        while(i < length-4 && _currentPaketType == SAMPLE_PARSER_NO_PAKET)
-        {
-            uint32_t currentSignature = toEquivalentUint32(data+i);
-                 if( currentSignature == SAMPLE_PARSER_ADC_PAKET_SIGNATURE ) _currentPaketType = SAMPLE_PARSER_ADC_PAKET_SIGNATURE;
-            else if( currentSignature == SAMPLE_PARSER_AUX_PAKET_SIGNATURE ) _currentPaketType = SAMPLE_PARSER_AUX_PAKET_SIGNATURE;
-            i++;
-        }
-        i--;
-        if( length-i-4 > 2 )
-        {
-            if(_currentPaketType == SAMPLE_PARSER_ADC_PAKET_SIGNATURE) decodeAdcData(data+i+4, length-i-4);
-            //else if(_currentPaketType == SAMPLE_PARSER_ADC_PAKET_SIGNATURE);
-        }
+        timeStampHead = timeStampHead+currentDelta;
+        totalCount = 0;
     }
 }
 
@@ -158,6 +122,11 @@ void SampleParser::loadCsv(QString fileName)
         }
         file.close();
     }
+}
+
+void SampleParser::setLimit(unsigned newSampleCountLimit)
+{
+    sampleCountLimit = newSampleCountLimit;
 }
 
 void SampleParser::clear()

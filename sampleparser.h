@@ -34,10 +34,6 @@ private:
     uint64_t timeStampHead = 0;
 
     //unsigned long _paketNumber = 0;
-    unsigned _currentPaketType = 0;
-    int _expectedCount = -1;
-    uint_fast8_t _totalCount = 0;
-    uint_fast16_t _currentDelta = 0;
 
     double _offset = 1.0;
 
@@ -59,18 +55,20 @@ signals:
     void gotAuxSample(AuxSample sample, int amountNowStored);
 
 public slots:
-    void newData(const uint8_t* data, size_t length);
     void clear();
     void setOffset(double offset);
     void resendRange(unsigned int from, unsigned int to);
     void saveCsv(QString fileName);
     void loadCsv(QString fileName);
+    void decodeAdcData(const uint8_t *data, size_t length);
+    void decodeAuxData(const uint8_t *data, size_t length);
+
+    void setLimit(unsigned newSampleCountLimit);
 
 private:
     static uint32_t toEquivalentUint32(const uint8_t* data);
     static uint16_t toEquivalentUint16(const uint8_t* data);
-    void decodeAdcData(const uint8_t *data, size_t length);
-    void decodeAuxData(const uint8_t *data, size_t length);
+
 };
 
 #endif // SAMPLEPARSER_H

@@ -16,10 +16,11 @@ private:
 
     gatt_connection_t* _connection = NULL;
 
-    uuid_t nordicUartTxUuid;
-    uuid_t nordicUartRxUuid;
+    uuid_t txUuid;
+    uuid_t adcUuid;
+    uuid_t auxUuid;
 
-    bool _foundNusService = false;
+    bool _foundService = false;
 
     QThread* _connectTread = nullptr;
 
@@ -35,7 +36,8 @@ private:
 signals:
     void deviceDisconnected(QString message);
     void deviceConnected();
-    void recived(const uint8_t* data, size_t length);
+    void recivedAdcPacket(const uint8_t* data, size_t length);
+    void recivedAuxPacket(const uint8_t* data, size_t length);
     void deviceConnectionInProgress();
 
 public slots:

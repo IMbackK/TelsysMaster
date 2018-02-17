@@ -52,6 +52,22 @@ void sendOfset(BleSerial* bleSerial)
     bleSerial->write(buffer, sizeof(buffer));
 }
 
+void sendRate(BleSerial* bleSerial, uint8_t rate)
+{
+    if(bleSerial->isConnected())
+    {
+        sendStop(bleSerial);
+        uint8_t data[6];
+        data[0] = 'r';
+        data[1] = 'a';
+        data[2] = 't';
+        data[3] = 'e';
+        data[4] = rate;
+        data[5] = '\n';
+        bleSerial->write(data, sizeof(data));
+    }
+}
+
 void sendCalValues(BleSerial* bleSerial, std::array<double, 10> in)
 {
     if(bleSerial->isConnected())
@@ -105,7 +121,8 @@ int main(int argc, char *argv[])
 
     BleSerial bleSerial(blteDevice);
     SampleParser sampleParser;
-    QObject::connect(&bleSerial, &BleSerial::recived, &sampleParser, &SampleParser::newData);
+    QObject::connect(&bleSerial, &BleSerial::recivedAdcPacket, &sampleParser, &SampleParser::decodeAdcData);
+    QObject::connect(&bleSerial, &BleSerial::recivedAuxPacket, &sampleParser, &SampleParser::decodeAuxData);
 
     MainWindow w;
     QObject::connect(&w, &MainWindow::openConnDiag, [&blteDevice, &bleSerial, &w](){selectDeviceToConnect(&blteDevice, &bleSerial, &w);});
@@ -118,6 +135,7 @@ int main(int argc, char *argv[])
     QObject::connect(&w, &MainWindow::stop, [&bleSerial](){sendStop(&bleSerial);});
     QObject::connect(&w, &MainWindow::sigReset, [&bleSerial](){sendReset(&bleSerial);});
     QObject::connect(&w, &MainWindow::sigRecalOfset, [&bleSerial](){sendOfset(&bleSerial);});
+    QObject::connect(&w, &MainWindow::sigSetRate, [&bleSerial](int rate){sendRate(&bleSerial, rate);});
 
 
     QObject::connect(&bleSerial, &BleSerial::deviceConnected, &w, &MainWindow::deviceConnected);
