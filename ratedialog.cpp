@@ -26,5 +26,5 @@ void RateDialog::accept()
 
 void RateDialog::reject()
 {
-    done(0);
+    done(1);
 }

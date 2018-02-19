@@ -47,23 +47,25 @@ void sendReset(BleSerial* bleSerial)
 
 void sendOfset(BleSerial* bleSerial)
 {
-    sendStop(bleSerial);
-    uint8_t buffer[] = "ofset\n";
+    //sendStop(bleSerial);
+    uint8_t buffer[] = "ost\n";
     bleSerial->write(buffer, sizeof(buffer));
 }
 
-void sendRate(BleSerial* bleSerial, uint8_t rate)
+void sendRate(BleSerial* bleSerial, uint16_t rate)
 {
     if(bleSerial->isConnected())
     {
         sendStop(bleSerial);
-        uint8_t data[6];
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        uint8_t data[7];
         data[0] = 'r';
         data[1] = 'a';
         data[2] = 't';
-        data[3] = 'e';
-        data[4] = rate;
+        data[3] = (rate & 0xFF00) >> 8;
+        data[4] = rate & 0x00FF;
         data[5] = '\n';
+        data[6] = '\0';
         bleSerial->write(data, sizeof(data));
     }
 }

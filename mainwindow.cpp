@@ -90,6 +90,8 @@ void MainWindow::deviceConnected()
     //ui->actionCallibration->setEnabled(true);
     ui->pushButton_stop->setEnabled(true);
     ui->pushButton_Reset->setEnabled(true);
+    ui->actionRates->setEnabled(true);
+    ui->actionRecalibrate_Offset->setEnabled(true);
     wasConnected = true;
     clearGraphAndListView();
     sigClear();
@@ -106,6 +108,9 @@ void MainWindow::deviceDisconnected()
     ui->pushButton_Reset->setEnabled(false);
     //ui->actionCallibration->setEnabled(false);
     ui->pushButton_Reset->setEnabled(false);
+
+    ui->actionRates->setEnabled(false);
+    ui->actionRecalibrate_Offset->setEnabled(false);
 }
 
 void MainWindow::deviceConnectionInProgress()

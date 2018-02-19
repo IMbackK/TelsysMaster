@@ -1,10 +1,10 @@
 #include "bleserial.h"
 #include <QDebug>
 
-#define UART_SERVICE_UUID "06E400001-B5A3-F393-­E0A9-­E50E24DCCA9E"
-#define UART_TX_UUID      "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-#define ADC_UUID      "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
-#define AUX_UUID       "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+#define SERVICE_UUID "66410001-b565-4284-d0a8-54775812af9e"
+#define TX_UUID      "66410002-b565-4284-d0a8-54775812af9e"
+#define ADC_UUID      "66410003-b565-4284-d0a8-54775812af9e"
+#define AUX_UUID       "66410004-b565-4284-d0a8-54775812af9e"
 
 //WARNING: HACK
 //regretably due to a gattlib bug gattlib_event_handler_t dose not pass user_data. Also gatt_connect_cb_t contains no user_data parameter therfore this hack is requierd.
@@ -14,7 +14,7 @@ BleSerial::BleSerial(void* adapter, bool setInstance): _adapter(adapter)
 {
      if(setInstance) bleSerialNotifyInstance = this;
 
-     gattlib_string_to_uuid(UART_TX_UUID, strlen(UART_TX_UUID), &txUuid);
+     gattlib_string_to_uuid(TX_UUID, strlen(TX_UUID), &txUuid);
      gattlib_string_to_uuid(ADC_UUID, strlen(ADC_UUID), &adcUuid);
      gattlib_string_to_uuid(AUX_UUID, strlen(AUX_UUID), &auxUuid);
 }
