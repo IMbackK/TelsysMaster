@@ -2,30 +2,25 @@
 #define BTLESERIAL_H
 #include <QObject>
 #include <QString>
-#include <QThread>
+#include <string>
 
-#include "gattlib.h"
+#include "blepp/logging.h"
+#include "blepp/pretty_printers.h"
+#include "blepp/blestatemachine.h"
+
+
 #include "blescanner.h"
-
 
 class BleSerial : public QObject
 {
     Q_OBJECT
 private:
-    void* _adapter;
-
-    gatt_connection_t* _connection = NULL;
-
-    uuid_t txUuid;
-    uuid_t adcUuid;
-    uuid_t auxUuid;
+    BLEPP::BLEGATTStateMachine _telemetrySystem;
 
     bool _foundService = false;
 
-    QThread* _connectTread = nullptr;
-
 public:
-    BleSerial(void* adapter, bool setInstance = true);
+    BleSerial();
     ~BleSerial();
 
     bool isConnected();
@@ -49,12 +44,12 @@ public slots:
     void deviceDisconnect();
 
 private slots:
-    void connectionCallback(/*gatt_connection_t* connection*/);
+    void serviceFound();
+    void serviceScanFinished();
 
 private:
-
-    static void notificationCallback(const uuid_t* uuid, const uint8_t* data, size_t length,  void* instanceVoid);
-    static void staticConnectionCallback(gatt_connection_t* connection);
+    void adcCharacteristicChange(const BLEPP::PDUNotificationOrIndication& notification);
+    void auxCharacteristicChange(const BLEPP::PDUNotificationOrIndication& notification);
 };
 
 #endif // BTLESERIAL_H

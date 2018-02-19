@@ -1,31 +1,41 @@
 #include <QDebug>
 
 #include "blescanner.h"
-#include "gattlib.h"
+
 #include <QThread>
 #include <QCoreApplication>
+#include <vector>
 
-//WARNING: HACK
-//regretably user data support for scanning is not supported by gattlib at this time.
-BleScanner* bleScannerNotifyInstance = nullptr;
-
-BleScanner::BleScanner(void* adapter, bool setInstance): _adapter(adapter)
+BleScanner::BleScanner(): _scanner(false, BLEPP::HCIScanner::FilterDuplicates::Software, BLEPP::HCIScanner::ScanType::Active )
 {
- if(setInstance) bleScannerNotifyInstance = this;
 }
 
 BleScanner::~BleScanner()
 {
-    if(bleScannerNotifyInstance == this) bleScannerNotifyInstance = nullptr;
     stop();
+    if( _scannThread != nullptr ) delete _scannThread;
 }
 
 void BleScanner::start()
 {
+    _scanner.start();
     qRegisterMetaType<BleDiscoveredDevice>();
-    _scannThread = QThread::create([this](){gattlib_adapter_scan_enable(this->_adapter, &BleScanner::discoverdDeviceCallback,  BLE_SCAN_TIMEOUT);});
+    _scannThread = QThread::create([this](){_scanner.start(); this->scannWorker();});
     connect(_scannThread, &QThread::finished, this, &BleScanner::scanningThreadFinished);
     _scannThread->start();
+}
+
+void BleScanner::scannWorker()
+{
+    std::vector<BLEPP::AdvertisingResponse> advertisments = _scanner.get_advertisements();
+
+    for(unsigned i = 0; i < advertisments.size(); i++)
+    {
+        BleDiscoveredDevice tmp;
+        tmp.address = QString::fromUtf8(advertisments[i].address.c_str());
+        tmp.name = "nan";//QString::fromUtf8(advertisments[i].local_name->name.c_str());
+        discoverdDevice(tmp);
+    }
 }
 
 void BleScanner::scanningThreadFinished()
@@ -46,15 +56,4 @@ void BleScanner::stop()
     {
        while (_scannThread->isRunning() )QCoreApplication::processEvents();
     }
-}
-
-void BleScanner::setNotificationInstance(BleScanner *instance)
-{
-    bleScannerNotifyInstance = instance;
-}
-
-void BleScanner::discoverdDeviceCallback(const char* address, const char* name)
-{
-    BleDiscoveredDevice newDevice(address, name);
-    if(bleScannerNotifyInstance != nullptr)bleScannerNotifyInstance->discoverdDevice(newDevice);
 }

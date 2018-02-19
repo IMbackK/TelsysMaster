@@ -6,6 +6,9 @@
 #include <QDebug>
 #include <QThread>
 
+#include "blepp/blestatemachine.h"
+#include "blepp/lescan.h"
+
 #define BLE_SCAN_TIMEOUT 4
 
 class BleDiscoveredDevice
@@ -25,16 +28,14 @@ class BleScanner: public QObject
     Q_OBJECT
 private:
     bool isScanning = false;
-    void* _adapter;
+    BLEPP::HCIScanner _scanner;
 
     QThread* _scannThread = nullptr;
 
 public:
-    BleScanner(void* adapter, bool setInstance = true);
+    BleScanner();
     ~BleScanner();
-    static void setNotificationInstance(BleScanner* instance);
     bool getScanning();
-
 
 public slots:
 
@@ -47,7 +48,7 @@ signals:
 
 private:
     void scanningThreadFinished();
-    static void discoverdDeviceCallback(const char* address, const char* name);
+    void scannWorker();
 };
 
 #endif // BLESCANNER_H

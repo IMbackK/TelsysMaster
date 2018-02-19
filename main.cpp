@@ -10,7 +10,7 @@
 #include "connectiondialog.h"
 #include "bleserial.h"
 #include "blescanner.h"
-#include "gattlib.h"
+//#include "gattlib.h"
 #include "sampleparser.h"
 #include "callibrationdialog.h"
 
@@ -18,7 +18,7 @@
 void selectDeviceToConnect(void* blteDevice, BleSerial* bleSerial, MainWindow* w)
 {
 
-    BleScanner scanner(blteDevice);
+    BleScanner scanner;
     ConnectionDialog conDiag(&scanner, w);
 
     QObject::connect(&conDiag, &ConnectionDialog::deviceSelected, bleSerial, &BleSerial::connectTo);
@@ -26,6 +26,7 @@ void selectDeviceToConnect(void* blteDevice, BleSerial* bleSerial, MainWindow* w
     conDiag.show();
     conDiag.exec();
 }
+
 
 void sendStart(BleSerial* bleSerial)
 {
@@ -113,15 +114,9 @@ int main(int argc, char *argv[])
     parser.addOption(adapterOption);
     parser.process(a);
 
-    void* blteDevice;
-    int errorCode = gattlib_adapter_open(parser.isSet(adapterOption) ? parser.value(adapterOption).toLatin1().data() : NULL, &blteDevice);
-    if(errorCode)
-    {
-        QMessageBox::critical(nullptr, "Error", "No active BLTE Adapter Detected.", QMessageBox::Ok);
-        return -1;
-    }
+    void* blteDevice = nullptr;
 
-    BleSerial bleSerial(blteDevice);
+    BleSerial bleSerial;
     SampleParser sampleParser;
     QObject::connect(&bleSerial, &BleSerial::recivedAdcPacket, &sampleParser, &SampleParser::decodeAdcData);
     QObject::connect(&bleSerial, &BleSerial::recivedAuxPacket, &sampleParser, &SampleParser::decodeAuxData);
