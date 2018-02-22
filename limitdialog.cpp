@@ -15,10 +15,12 @@ LimitDialog::~LimitDialog()
 
 void LimitDialog::accept()
 {
-    graphPointLimit(ui->spinBox_graph->value());
-    listViewPointLimit(ui->spinBox_list->value());
-    memoryDepth(ui->spinBox_sampleMemory->value());
     done(0);
+}
+
+void LimitDialog::reject()
+{
+    done(1);
 }
 
 void LimitDialog::setGraphPointLimit(int i)
@@ -26,8 +28,28 @@ void LimitDialog::setGraphPointLimit(int i)
     ui->spinBox_graph->setValue(i);
 }
 
+void LimitDialog::setSampleMemoryLimit(int i)
+{
+    ui->spinBox_sampleMemory->setValue(i);
+}
+
 
 void LimitDialog::setListViewPointLimit(int i)
 {
     ui->spinBox_list->setValue(i);
+}
+
+int LimitDialog::getSampleMemoryLimit()
+{
+    return ui->spinBox_sampleMemory->value();
+}
+
+int LimitDialog::getGraphLimit()
+{
+    return ui->spinBox_graph->value();
+}
+
+int LimitDialog::getListLimit()
+{
+    return ui->spinBox_list->value();
 }

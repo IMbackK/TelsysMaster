@@ -37,7 +37,8 @@ SOURCES += \
     limitdialog.cpp \
     callibrationdialog.cpp \
     replotdiag.cpp \
-    ratedialog.cpp
+    ratedialog.cpp \
+    statisticsdialog.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -51,7 +52,8 @@ HEADERS += \
     limitdialog.h \
     callibrationdialog.h \
     replotdiag.h \
-    ratedialog.h
+    ratedialog.h \
+    statisticsdialog.h
 
 FORMS += \
         mainwindow.ui \
@@ -59,4 +61,5 @@ FORMS += \
     limitdialog.ui \
     callibrationdialog.ui \
     replotdiag.ui \
-    ratedialog.ui
+    ratedialog.ui \
+    statisticsdialog.ui

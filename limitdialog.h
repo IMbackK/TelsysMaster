@@ -15,17 +15,20 @@ public:
     explicit LimitDialog(QWidget *parent = 0);
     ~LimitDialog();
 
+    int getSampleMemoryLimit();
+    int getGraphLimit();
+    int getListLimit();
+    void setGraphPointLimit(int i);
+    void setListViewPointLimit(int i);
+    void setSampleMemoryLimit(int i);
+
 public slots:
 
     void accept();
-    void setGraphPointLimit(int i);
-    void setListViewPointLimit(int i);
+    void reject();
 
 signals:
 
-    void graphPointLimit(int i);
-    void listViewPointLimit(int i);
-    void memoryDepth(int i);
 
 private:
     Ui::LimitDialog *ui;

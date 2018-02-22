@@ -337,7 +337,33 @@
          </size>
         </property>
         <property name="text">
-         <string>Samples Stored</string>
+         <string>Samples Stored.          </string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLCDNumber" name="lcdNumber_bufferPercent">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="digitCount">
+         <number>3</number>
+        </property>
+        <property name="segmentStyle">
+         <enum>QLCDNumber::Flat</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_12">
+        <property name="text">
+         <string>% full</string>
         </property>
        </widget>
       </item>
@@ -422,8 +448,9 @@
     <property name="title">
      <string>Sa&amp;mples</string>
     </property>
-    <addaction name="actionClear"/>
     <addaction name="actionReplot"/>
+    <addaction name="separator"/>
+    <addaction name="actionClear"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -531,6 +558,29 @@
    </property>
    <property name="text">
     <string>Recalibrate &amp;Offset</string>
+   </property>
+  </action>
+  <action name="actionStatistics">
+   <property name="text">
+    <string>Statistics</string>
+   </property>
+  </action>
+  <action name="actionAdd_Regression">
+   <property name="text">
+    <string>Add Regression</string>
+   </property>
+  </action>
+  <action name="actionDelete_Regression">
+   <property name="text">
+    <string>Delete Regression</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionExport_Selection">
+   <property name="text">
+    <string>Export Selection</string>
    </property>
   </action>
  </widget>

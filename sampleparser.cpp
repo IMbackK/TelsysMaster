@@ -30,12 +30,37 @@ uint16_t SampleParser::toEquivalentUint16(const uint8_t *data)
 
 void SampleParser::decodeAuxData(const uint8_t *data, size_t length)
 {
+    if(length > 3)
+    {
+        int expectedCount = data[0];
+        uint_fast8_t totalCount = expectedCount;
+        uint16_t currentDelta = toEquivalentUint16(data+1);
 
+        for(size_t i = 3; i + 2 < length && expectedCount > 0; i+=2)
+        {
+            AdcSample tmp;
+            tmp.value = toEquivalentUint16(data+i);
+            tmp.deltaTime = currentDelta/totalCount;
+            tmp.id = _currentAdcSampleId;
+
+            tmp.timeStamp=timeStampHead + tmp.deltaTime*(totalCount-expectedCount);
+            tmp.value = tmp.value*_offset;
+
+            if(adcSamples.size() > sampleCountLimit-1) adcSamples.erase(adcSamples.begin()); //limit samples
+            adcSamples.push_back(tmp);
+            gotAdcSample(tmp, adcSamples.size());
+
+            expectedCount--;
+            _currentAdcSampleId++;
+        }
+        timeStampHead = timeStampHead+currentDelta;
+        totalCount = 0;
+    }
 }
 
 void SampleParser::resendRange(unsigned int from, unsigned int to)
 {
-    for(size_t i = from; i < to; i++)gotAdcSample(adcSamples[i], adcSamples.size());
+    gotAdcSamples(adcSamples.begin()+from, adcSamples.begin()+to, adcSamples.size(), true);
 }
 
 void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
@@ -56,9 +81,9 @@ void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
             tmp.timeStamp=timeStampHead + tmp.deltaTime*(totalCount-expectedCount);
             tmp.value = tmp.value*_offset;
 
-            if(adcSamples.size() > sampleCountLimit) adcSamples.erase(adcSamples.begin()); //limit samples
+            if(adcSamples.size() > sampleCountLimit-1) adcSamples.erase(adcSamples.begin()); //limit samples
             adcSamples.push_back(tmp);
-            gotAdcSample(tmp, adcSamples.size());
+            gotAdcSamples(adcSamples.end()-totalCount, adcSamples.end(), adcSamples.size(), false);
 
             expectedCount--;
             _currentAdcSampleId++;
@@ -110,23 +135,29 @@ void SampleParser::loadCsv(QString fileName)
             {
 
                 AdcSample tmp;
-                tmp.id = currentlineTokens[0].toInt();
-                tmp.timeStamp = currentlineTokens[1].toInt();
-                tmp.value = currentlineTokens[2].toInt();
+                tmp.id = currentlineTokens[0].toULong();
+                tmp.timeStamp = currentlineTokens[1].toULong();
+                tmp.value = currentlineTokens[2].toULong();
                 adcSamples.size() == 0 ? tmp.deltaTime = tmp.timeStamp : tmp.deltaTime = tmp.timeStamp - adcSamples.back().timeStamp;
                 adcSamples.push_back(tmp);
-                gotAdcSample(tmp, adcSamples.size());
             }
-            if(count % 1024 == 0)QCoreApplication::processEvents();
+            if(count % 8192 == 0)QCoreApplication::processEvents();
             count++;
         }
         file.close();
+        gotAdcSamples(adcSamples.begin(), adcSamples.end(), adcSamples.size(), true);
     }
 }
 
 void SampleParser::setLimit(unsigned newSampleCountLimit)
 {
     sampleCountLimit = newSampleCountLimit;
+    while(adcSamples.size() > sampleCountLimit-1) adcSamples.erase(adcSamples.begin());
+}
+
+int SampleParser::getLimit()
+{
+    return sampleCountLimit;
 }
 
 void SampleParser::clear()

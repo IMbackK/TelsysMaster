@@ -47,12 +47,16 @@ public:
     std::vector<AdcSample> adcSamples;
     std::vector<AuxSample> auxSamples;
 
+    int getLimit();
+
 public:
     explicit SampleParser(QObject *parent = nullptr);
 
 signals:
     void gotAdcSample(AdcSample sample, int amountNowStored);
     void gotAuxSample(AuxSample sample, int amountNowStored);
+
+    void gotAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit);
 
 public slots:
     void clear();

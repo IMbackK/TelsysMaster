@@ -129,10 +129,12 @@ int main(int argc, char *argv[])
     MainWindow w;
     QObject::connect(&w, &MainWindow::openConnDiag, [&blteDevice, &bleSerial, &w](){selectDeviceToConnect(&blteDevice, &bleSerial, &w);});
     QObject::connect(&sampleParser, &SampleParser::gotAdcSample, &w, &MainWindow::newAdcSample);
+    QObject::connect(&sampleParser, &SampleParser::gotAdcSamples, &w, &MainWindow::newAdcSamples);
     QObject::connect(&w, &MainWindow::sigClear, &sampleParser, &SampleParser::clear);
     QObject::connect(&w, &MainWindow::sigSaveCsv, &sampleParser, &SampleParser::saveCsv);
     QObject::connect(&w, &MainWindow::sigLoadCsv, &sampleParser, &SampleParser::loadCsv);
     QObject::connect(&w, &MainWindow::sigReplot, &sampleParser, &SampleParser::resendRange);
+    QObject::connect(&w, &MainWindow::sigSampleLimit, &sampleParser, &SampleParser::setLimit);
     QObject::connect(&w, &MainWindow::start, [&bleSerial](){sendStart(&bleSerial);});
     QObject::connect(&w, &MainWindow::stop, [&bleSerial](){sendStop(&bleSerial);});
     QObject::connect(&w, &MainWindow::sigReset, [&bleSerial](){sendReset(&bleSerial);});
