@@ -35,7 +35,7 @@ public:
         z = 0;
     }
     
-    Point3D operator + (const Point3D& param)
+    Point3D operator + (const Point3D& param) const
     {
         Point3D sum;
         sum.x = x+param.x;
@@ -44,8 +44,17 @@ public:
         return sum;
     }
 
-    T amplitude()
+    Point3D<double> scale(double scale) const
     {
-        return sqrt(x*x+y*y+z*z);
+        Point3D<double> scaled;
+        scaled.x = x*scale;
+        scaled.y = y*scale;
+        scaled.z = z*scale;
+        return scaled;
+    }
+
+    double amplitude() const
+    {
+        return sqrt(x*(double)x+y*(double)y+z*(double)z);
     }
 };

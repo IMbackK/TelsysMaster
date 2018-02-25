@@ -1,4 +1,4 @@
-#include "connectiondialog.h"
+﻿#include "connectiondialog.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -22,10 +22,15 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    ui->plot->setLable("ADC Value");
+    ui->plot_accl->setLable("Accelleration [m/s^2]");
+
+    ui->plot_accl->setMaxValue(100);
+
     //menu actions
     connect(ui->actionQuit, &QAction::triggered, this, &MainWindow::close);
     connect(ui->actionSave_PNG, &QAction::triggered, this, &MainWindow::savePdf);
-    connect(ui->actionClear, &QAction::triggered, this, &MainWindow::clearGraphAndListView);
+    connect(ui->actionClear, &QAction::triggered, this, &MainWindow::clearGraphs);
     connect(ui->actionClear, &QAction::triggered, this, &MainWindow::sigClear);
     connect(ui->actionLimits, &QAction::triggered, this, &MainWindow::showLimitDialog);
     connect(ui->actionSave_CSV, &QAction::triggered, this, &MainWindow::saveCsv);
@@ -63,14 +68,13 @@ void MainWindow::deviceConnected()
     ui->pushButton_Connect->setEnabled(false);
     ui->pushButton_disconnect->setEnabled(true);
     ui->pushButton_run->setEnabled(true);
-    //ui->actionCallibration->setEnabled(true);
     ui->pushButton_stop->setEnabled(true);
     ui->pushButton_Reset->setEnabled(true);
     ui->actionRates->setEnabled(true);
     ui->actionRecalibrate_Offset->setEnabled(true);
     ui->actionLoad_CSV->setEnabled(false);
     wasConnected = true;
-    clearGraphAndListView();
+    clearGraphs();
     sigClear();
 }
 
@@ -83,7 +87,6 @@ void MainWindow::deviceDisconnected()
     ui->pushButton_run->setEnabled(false);
     ui->pushButton_stop->setEnabled(false);
     ui->pushButton_Reset->setEnabled(false);
-    //ui->actionCallibration->setEnabled(false);
     ui->pushButton_Reset->setEnabled(false);
     ui->actionLoad_CSV->setEnabled(true);
 
@@ -97,12 +100,36 @@ void MainWindow::deviceConnectionInProgress()
     ui->pushButton_Connect->setEnabled(false);
 }
 
-void MainWindow::clearGraphAndListView()
+void MainWindow::clearGraphs()
 {
+    //adc view
     ui->plot->clear();
-
     ui->lcdNumber_Samples->display(0);
     ui->lcdNumber_SampleRate->display(0);
+    ui->label_LatestSample->setText("");
+
+    //aux view
+    ui->plot_accl->clear();
+    ui->label_LatestAuxSample->setText("");
+
+}
+
+void MainWindow::newAuxSample(const AuxSample& sample)
+{
+    QString buffer;
+    QTextStream ss(&buffer);
+
+    Point3D<double> scaledAccel = sample.accel.scale(sample.accelScale);
+
+    ui->plot_accl->addData(sample.timeStamp/(float)1000000, scaledAccel.amplitude());
+
+    ss<<"Timestamp: "<<sample.timeStamp<<" Acceleration Amplitude: "<<scaledAccel.amplitude()
+      <<"  Acceleration xyz: "<<scaledAccel.x<<','<<scaledAccel.y<<','<<scaledAccel.z
+      <<"  Magnetic vec xyz: "<<sample.magn.x<<','<<sample.magn.y<<','<<sample.magn.z
+      <<"  Temperature: "<<sample.temperature;
+    ui->label_LatestAuxSample->setText(buffer);
+
+    if(!ui->tab_2->isHidden()) ui->plot_accl->replot(QCustomPlot::rpQueuedRefresh);
 }
 
 void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit)
@@ -128,7 +155,7 @@ void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vect
     }
 
     ui->plot->addData(keys, values, true, reLimit);
-    ui->plot->replot(QCustomPlot::rpQueuedRefresh);
+    if(!ui->tab->isHidden())ui->plot->replot(QCustomPlot::rpQueuedRefresh);
 }
 
 void MainWindow::showLimitDialog()
@@ -148,6 +175,7 @@ void MainWindow::showLimitDialog()
         ui->lcdNumber_bufferPercent->display((int)(samplenumber/(float)sampleMemoryLimit*100));
 
         ui->plot->setLimit(limitDialog.getGraphLimit());
+        ui->plot_accl->setLimit(limitDialog.getGraphLimit()/10);
         ui->plot->replot(QCustomPlot::RefreshPriority::rpQueuedReplot);
     }
 }
@@ -162,10 +190,20 @@ void MainWindow::showRateDialog()
     }
 }
 
+void MainWindow::tabChanged()
+{
+    ui->plot->replot();
+    ui->plot_accl->replot();
+}
+
 void MainWindow::savePdf()
 {
     QString fileName = QFileDialog::getSaveFileName(this, "Save graph as PDF", "./", "*.pdf" );
-    if(!fileName.isEmpty()) ui->plot->savePdf(fileName);
+    if(!fileName.isEmpty())
+    {
+        if(ui->tabWidget->currentIndex() == 0)ui->plot->savePdf(fileName);
+        else ui->plot_accl->savePdf(fileName);
+    }
 }
 
 void MainWindow::saveCsv()
@@ -179,7 +217,7 @@ void MainWindow::loadCsv()
     QString fileName = QFileDialog::getOpenFileName(this, "Load CSV", "./", "*.csv" );
     if(!fileName.isEmpty())
     {
-        clearGraphAndListView();
+        clearGraphs();
         sigLoadCsv(fileName);
     }
 }
@@ -193,7 +231,7 @@ void MainWindow::replot()
         replotDiag.show();
         if(replotDiag.exec() == 0 && replotDiag.getFrom() < replotDiag.getTo())
         {
-            clearGraphAndListView();
+            clearGraphs();
             ui->plot->setLimit(replotDiag.getTo() - replotDiag.getFrom());
             sigReplot(replotDiag.getFrom(), replotDiag.getTo());
         }

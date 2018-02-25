@@ -24,13 +24,19 @@ private:
     QAction actionDelete_Regression;
     QAction actionExport_Selection;
 
+    QString lable = "Value";
+
 public:
     Plot(QWidget* parent = nullptr);
     ~Plot();
 
+    void setLable(QString lable);
+
     void clear();
     void setLimit(unsigned graphPointLimit);
     unsigned getLimit();
+
+    void setMaxValue(double maxVal);
 
 signals:
     void sigSaveCsv();
@@ -44,6 +50,7 @@ public slots:
     void addRegression();
 
     void addData(QVector<double> keys, QVector<double> values, bool inOrder = false, bool ignoreLimit = false);
+    void addData(double key, double value, bool ignoreLimit = false);
 
 protected:
     virtual void mousePressEvent(QMouseEvent *event);

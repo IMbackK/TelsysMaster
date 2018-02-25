@@ -13,16 +13,19 @@ class AdcSample
 {
 public:
     uint16_t value;
-    uint16_t deltaTime;
+    uint32_t deltaTime;
     uint64_t timeStamp;
     uint64_t id;
+    double scale = 1;
 };
 
 class AuxSample
 {
 public:
     Point3D<int16_t> accel;
+    double accelScale = 1;
     Point3D<int16_t> magn;
+    double magnScale = 1;
     uint8_t temperature;
     uint64_t timeStamp;
     uint64_t id;
@@ -33,9 +36,8 @@ class SampleParser : public QObject
     Q_OBJECT
 private:
 
-    uint64_t timeStampHead = 0;
-
-    //unsigned long _paketNumber = 0;
+    uint64_t adcTimeStampHead = 0;
+    uint64_t auxTimeStampHead = 0;
 
     double _offset = 1.0;
 
@@ -71,6 +73,7 @@ public slots:
     void setLimit(unsigned newSampleCountLimit);
 
 private:
+    static uint32_t uCTicksToUs(const uint16_t ticks);
     static uint32_t toEquivalentUint32(const uint8_t* data);
     static uint16_t toEquivalentUint16(const uint8_t* data);
 

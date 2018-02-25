@@ -9,7 +9,8 @@
 
 #include "utilitys.h"
 
-#define SAMPLE_PARSER_PAKET_END_SIGNATURE 0xFFFF
+#define TIMER_PRESCALER 0
+#define TIMER_CLOCK_FREQ 32768 //Hz
 
 SampleParser::SampleParser(QObject *parent) : QObject(parent){}
 
@@ -30,14 +31,36 @@ uint16_t SampleParser::toEquivalentUint16(const uint8_t *data)
     return result;
 }
 
-void SampleParser::decodeAuxData(const uint8_t *data, size_t length)
-{
-
-}
-
 void SampleParser::resendRange(unsigned int from, unsigned int to)
 {
     if(adcSampleCallback) adcSampleCallback(adcSamples.begin()+from, adcSamples.begin()+to, adcSamples.size(), true);
+}
+
+
+uint32_t SampleParser::uCTicksToUs(const uint16_t ticks)
+{
+    return ticks*((TIMER_PRESCALER+1)*1000000) / TIMER_CLOCK_FREQ;
+}
+
+void SampleParser::decodeAuxData(const uint8_t *data, size_t length)
+{
+    if(length >= 15 )
+    {
+        AuxSample tmp;
+        tmp.timeStamp = auxTimeStampHead;
+        tmp.accel.x = toEquivalentUint16(data+2);
+        tmp.accel.y = toEquivalentUint16(data+4);
+        tmp.accel.z = toEquivalentUint16(data+6);
+        tmp.magn.x = toEquivalentUint16(data+8);
+        tmp.magn.y = toEquivalentUint16(data+10);
+        tmp.magn.z = toEquivalentUint16(data+12);
+        tmp.temperature = data[14];
+        tmp.accelScale =0.00239501953124; //Telemetry System provides 417.533129459 counts per 1 m/s^2
+
+        auxTimeStampHead += uCTicksToUs(toEquivalentUint16(data));
+
+        if(auxSampleCallback) auxSampleCallback(tmp);
+    }
 }
 
 void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
@@ -46,16 +69,16 @@ void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
     {
         int expectedCount = data[0];
         uint_fast8_t totalCount = expectedCount;
-        uint16_t currentDelta = toEquivalentUint16(data+1);
+        uint32_t currentDelta = uCTicksToUs(toEquivalentUint16(data+1));
 
         for(size_t i = 3; i + 2 <= length && expectedCount > 0; i+=2)
         {
             AdcSample tmp;
             tmp.value = toEquivalentUint16(data+i);
-            tmp.deltaTime = currentDelta;
+            tmp.deltaTime = currentDelta/totalCount;
             tmp.id = _currentAdcSampleId;
 
-            tmp.timeStamp=timeStampHead + tmp.deltaTime*(totalCount-expectedCount);
+            tmp.timeStamp=adcTimeStampHead+tmp.deltaTime*(totalCount-expectedCount);
             tmp.value = tmp.value*_offset;
 
             if(adcSamples.size() > sampleCountLimit-1) adcSamples.erase(adcSamples.begin()); //limit samples
@@ -64,8 +87,8 @@ void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
             expectedCount--;
             _currentAdcSampleId++;
         }
+        adcTimeStampHead = adcTimeStampHead+currentDelta;
         if(adcSampleCallback) adcSampleCallback(adcSamples.end()-totalCount+expectedCount, adcSamples.end(), adcSamples.size(), false);
-        timeStampHead = timeStampHead+currentDelta*totalCount;
         totalCount = 0;
     }
 }
@@ -135,6 +158,7 @@ void SampleParser::setLimit(unsigned newSampleCountLimit)
 {
     sampleCountLimit = newSampleCountLimit;
     while(adcSamples.size() > sampleCountLimit-1) adcSamples.erase(adcSamples.begin());
+    while(auxSamples.size() > sampleCountLimit-1) auxSamples.erase(auxSamples.begin());
 }
 
 int SampleParser::getLimit()
@@ -147,7 +171,8 @@ void SampleParser::clear()
     adcSamples.clear();
     auxSamples.clear();
     _currentAdcSampleId = 0;
-    timeStampHead = 0;
+    adcTimeStampHead = 0;
+    auxTimeStampHead = 0;
     adcSamples.shrink_to_fit();
     auxSamples.shrink_to_fit();
 }

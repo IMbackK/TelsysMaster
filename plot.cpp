@@ -13,7 +13,7 @@ Plot::Plot(QWidget* parent):
     actionExport_Selection("Export selection", this)
 {
     xAxis->setLabel("Time [s]");
-    yAxis->setLabel("ADC value");
+    yAxis->setLabel(lable);
     xAxis->setRange(0, 10);
     yAxis->setRange(0, 65535);
     setOpenGl(false);
@@ -60,6 +60,12 @@ Plot::~Plot()
 
 }
 
+void Plot::setLable(QString lable)
+{
+    this->lable = lable;
+    yAxis->setLabel(lable);
+}
+
 void Plot::addMainGraph()
 {
     addGraph();
@@ -75,6 +81,11 @@ void Plot::clear()
     addMainGraph();
     xAxis->setRange(0, 10);
     replot();
+}
+
+void Plot::setMaxValue(double maxVal)
+{
+    yAxis->setRange(0, maxVal);
 }
 
 void Plot::saveCsvDiag()
@@ -190,6 +201,16 @@ void Plot::addData(QVector<double> keys, QVector<double> values, bool inOrder, b
         graph(0)->addData(keys, values, inOrder);
         if(!ignoreLimit)while(graph(0)->data()->size() > graphPointLimit) graph(0)->data()->remove(graph(0)->data()->begin()->key);
         xAxis->setRange( graph(0)->data()->begin()->key, keys.back() );
+    }
+}
+
+void Plot::addData(double key, double value, bool ignoreLimit)
+{
+    if(graphCount() > 0)
+    {
+        graph(0)->addData(key, value);
+        if(!ignoreLimit)while(graph(0)->data()->size() > graphPointLimit) graph(0)->data()->remove(graph(0)->data()->begin()->key);
+        xAxis->setRange( graph(0)->data()->begin()->key, key );
     }
 }
 

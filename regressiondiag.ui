@@ -67,6 +67,9 @@
        <property name="frameShape">
         <enum>QFrame::NoFrame</enum>
        </property>
+       <property name="smallDecimalPoint">
+        <bool>false</bool>
+       </property>
        <property name="digitCount">
         <number>8</number>
        </property>

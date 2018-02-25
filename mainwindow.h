@@ -26,6 +26,7 @@ public:
     ~MainWindow();
 
     void newAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit);
+    void newAuxSample(const AuxSample &sample);
 
 signals:
     void openConnDiag();
@@ -57,13 +58,13 @@ private slots:
     void savePdf();
     void saveCsv();
     void loadCsv();
-    void clearGraphAndListView();
-
-    //virtual void show();
+    void clearGraphs();
 
     //dialogs
     void showLimitDialog();
     void replot();
+
+    void tabChanged();
 
 private:
     void onStart();

@@ -70,6 +70,8 @@ int main(int argc, char *argv[])
         };
     sampleParser.setAdcSampleCallback(windowAdcCb);
 
+    sampleParser.setAuxSampleCallback([&w](const AuxSample& sample){w.newAuxSample(sample);});
+
     QObject::connect(&w, &MainWindow::openConnDiag, [&blteDevice, &bleSerial, &w](){selectDeviceToConnect(&blteDevice, &bleSerial, &w);});
     QObject::connect(&w, &MainWindow::sigClear, &sampleParser, &SampleParser::clear);
     QObject::connect(&w, &MainWindow::sigSaveCsv, &sampleParser, &SampleParser::saveCsv);
