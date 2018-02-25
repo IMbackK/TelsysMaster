@@ -17,6 +17,7 @@
 
 #pragma once
 #include <stdint.h>
+#include <math.h>
 
 template <class T>
 class Point3D
@@ -41,5 +42,10 @@ public:
         sum.y = y+param.y;
         sum.z = z+param.z;
         return sum;
+    }
+
+    T amplitude()
+    {
+        return sqrt(x*x+y*y+z*z);
     }
 };

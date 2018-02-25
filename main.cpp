@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QLoggingCategory>
 #include <QCommandLineParser>
+#include <functional>
 
 #include "mainwindow.h"
 #include "connectiondialog.h"
@@ -13,6 +14,7 @@
 #include "gattlib.h"
 #include "sampleparser.h"
 #include "callibrationdialog.h"
+#include "utilitys.h"
 
 
 void selectDeviceToConnect(void* blteDevice, BleSerial* bleSerial, MainWindow* w)
@@ -27,73 +29,6 @@ void selectDeviceToConnect(void* blteDevice, BleSerial* bleSerial, MainWindow* w
     conDiag.exec();
 }
 
-void sendStart(BleSerial* bleSerial)
-{
-    uint8_t buffer[] = "on\n";
-    bleSerial->write(buffer, sizeof(buffer));
-}
-
-void sendStop(BleSerial* bleSerial)
-{
-    uint8_t buffer[] = "off\n";
-    bleSerial->write(buffer, sizeof(buffer));
-}
-
-void sendReset(BleSerial* bleSerial)
-{
-    uint8_t buffer[] = "rst\n";
-    bleSerial->write(buffer, sizeof(buffer));
-}
-
-void sendOfset(BleSerial* bleSerial)
-{
-    //sendStop(bleSerial);
-    uint8_t buffer[] = "ost\n";
-    bleSerial->write(buffer, sizeof(buffer));
-}
-
-void sendRate(BleSerial* bleSerial, uint16_t rate)
-{
-    if(bleSerial->isConnected())
-    {
-        sendStop(bleSerial);
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        uint8_t data[7];
-        data[0] = 'r';
-        data[1] = 'a';
-        data[2] = 't';
-        data[3] = (rate & 0xFF00) >> 8;
-        data[4] = rate & 0x00FF;
-        data[5] = '\n';
-        data[6] = '\0';
-        bleSerial->write(data, sizeof(data));
-    }
-}
-
-void sendCalValues(BleSerial* bleSerial, std::array<double, 10> in)
-{
-    if(bleSerial->isConnected())
-    {
-        sendStop(bleSerial);
-        uint8_t data[14];
-        data[0] = 'c';
-        data[1] = 'a';
-        data[2] = 'l';
-
-        data[13] = '\n';
-
-        for(unsigned int i = 3; i < 13; i++) data[i] = (uint8_t)(in[i-3]*100);
-
-        bleSerial->write(data, sizeof(data));
-    }
-    else
-    {
-        QMessageBox::information(nullptr, "Warning", "No BTLE device connected. Applying Scale only.", QMessageBox::Ok);
-    }
-}
-
-
-
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -102,7 +37,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("UVOS");
     QCoreApplication::setOrganizationDomain("uvos.xyz");
     QCoreApplication::setApplicationName("BAMaster");
-    QCoreApplication::setApplicationVersion("0.2");
+    QCoreApplication::setApplicationVersion("0.3");
 
     //parse comand line
     QCommandLineParser parser;
@@ -123,13 +58,19 @@ int main(int argc, char *argv[])
 
     BleSerial bleSerial(blteDevice);
     SampleParser sampleParser;
-    QObject::connect(&bleSerial, &BleSerial::recivedAdcPacket, &sampleParser, &SampleParser::decodeAdcData);
-    QObject::connect(&bleSerial, &BleSerial::recivedAuxPacket, &sampleParser, &SampleParser::decodeAuxData);
+    bleSerial.setAdcPacketCallback([&sampleParser](const uint8_t *data, size_t length){sampleParser.decodeAdcData(data, length);});
+    bleSerial.setAuxPacketCallback([&sampleParser](const uint8_t *data, size_t length){sampleParser.decodeAuxData(data, length);});
 
     MainWindow w;
+
+    std::function<void(std::vector<AdcSample>::iterator, std::vector<AdcSample>::iterator, unsigned, bool)>windowAdcCb =
+        [&w](std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned count, bool reLimit)
+        {
+            w.newAdcSamples(begin,end,count,reLimit);
+        };
+    sampleParser.setAdcSampleCallback(windowAdcCb);
+
     QObject::connect(&w, &MainWindow::openConnDiag, [&blteDevice, &bleSerial, &w](){selectDeviceToConnect(&blteDevice, &bleSerial, &w);});
-    QObject::connect(&sampleParser, &SampleParser::gotAdcSample, &w, &MainWindow::newAdcSample);
-    QObject::connect(&sampleParser, &SampleParser::gotAdcSamples, &w, &MainWindow::newAdcSamples);
     QObject::connect(&w, &MainWindow::sigClear, &sampleParser, &SampleParser::clear);
     QObject::connect(&w, &MainWindow::sigSaveCsv, &sampleParser, &SampleParser::saveCsv);
     QObject::connect(&w, &MainWindow::sigLoadCsv, &sampleParser, &SampleParser::loadCsv);
@@ -141,9 +82,7 @@ int main(int argc, char *argv[])
     QObject::connect(&w, &MainWindow::sigRecalOfset, [&bleSerial](){sendOfset(&bleSerial);});
     QObject::connect(&w, &MainWindow::sigSetRate, [&bleSerial](int rate){sendRate(&bleSerial, rate);});
 
-
     QObject::connect(&bleSerial, &BleSerial::deviceConnected, &w, &MainWindow::deviceConnected);
-    //QObject::connect(&bleSerial, &BleSerial::disconnected, &w, &MainWindow::disconnected);
     QObject::connect(&bleSerial, &BleSerial::deviceDisconnected, &w, &MainWindow::connectionFailed);
     QObject::connect(&bleSerial, &BleSerial::deviceConnectionInProgress, &w, &MainWindow::deviceConnectionInProgress);
     QObject::connect(&w, &MainWindow::sigDeviceDisconnect, &bleSerial, &BleSerial::deviceDisconnect);

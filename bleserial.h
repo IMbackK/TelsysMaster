@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QString>
 #include <QThread>
+#include <functional>
 
 #include "gattlib.h"
 #include "blescanner.h"
@@ -24,11 +25,17 @@ private:
 
     QThread* _connectTread = nullptr;
 
+    std::function<void(const uint8_t*, size_t)> adcPaketCallback;
+    std::function<void(const uint8_t*, size_t)> auxPaketCallback;
+
 public:
     BleSerial(void* adapter, bool setInstance = true);
     ~BleSerial();
 
     bool isConnected();
+
+    void setAdcPacketCallback(std::function<void(const uint8_t*, size_t)> cb);
+    void setAuxPacketCallback(std::function<void(const uint8_t*, size_t)> cb);
 
 private:
     void reset();
@@ -36,8 +43,6 @@ private:
 signals:
     void deviceDisconnected(QString message);
     void deviceConnected();
-    void recivedAdcPacket(const uint8_t* data, size_t length);
-    void recivedAuxPacket(const uint8_t* data, size_t length);
     void deviceConnectionInProgress();
 
 public slots:

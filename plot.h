@@ -1,0 +1,58 @@
+#ifndef PLOT_H
+#define PLOT_H
+
+#include<QVector>
+#include<QAction>
+#include<QWidget>
+
+#include "qcustomplot/qcustomplot.h"
+#include "regessioncalculator.h"
+#include "statisticsdialog.h"
+#include "utilitys.h"
+
+class Plot : public QCustomPlot
+{
+private:
+    std::vector<RegessionCalculator> regressions;
+
+    QMenu graphContextMenu;
+
+    unsigned graphPointLimit = 10000;
+
+    QAction actionStatistics;
+    QAction actionAdd_Regression;
+    QAction actionDelete_Regression;
+    QAction actionExport_Selection;
+
+public:
+    Plot(QWidget* parent = nullptr);
+    ~Plot();
+
+    void clear();
+    void setLimit(unsigned graphPointLimit);
+    unsigned getLimit();
+
+signals:
+    void sigSaveCsv();
+
+public slots:
+    void addPoints(QVector<double> keys, QVector<double> values);
+    void saveCsv(QString fileName);
+    void saveCsvDiag();
+    void showStatistics();
+    void deleteRegression();
+    void addRegression();
+
+    void addData(QVector<double> keys, QVector<double> values, bool inOrder = false, bool ignoreLimit = false);
+
+protected:
+    virtual void mousePressEvent(QMouseEvent *event);
+    virtual void mouseReleaseEvent(QMouseEvent *event);
+
+private:
+    void addMainGraph();
+
+};
+
+#endif // PLOT_H
+

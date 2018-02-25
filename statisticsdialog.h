@@ -16,6 +16,13 @@ public:
     explicit StatisticsDialog(QCPDataRange dataRange, QSharedPointer< QCPGraphDataContainer > data, QWidget *parent = 0);
     ~StatisticsDialog();
 
+private slots:
+    void copyCount();
+    void copyTimestamps();
+    void copyDeltaT();
+    void copyMean();
+    void copyMinMax();
+
 private:
     Ui::StatisticsDialog *ui;
 };

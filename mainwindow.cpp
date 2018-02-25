@@ -4,22 +4,20 @@
 
 #include <QMessageBox>
 #include <QTextStream>
-#include <QListWidgetItem>
 #include <QString>
 #include <QFileDialog>
 #include <QPen>
 #include <QColor>
 #include <replotdiag.h>
 
-#include "qcustomplot/qcustomplot.h"
+#include "plot.h"
 
 #include "limitdialog.h"
 #include "ratedialog.h"
-#include "statisticsdialog.h"
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    graphContextMenu(this),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
@@ -37,7 +35,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionRecalibrate_Offset, &QAction::triggered, this, &MainWindow::sigRecalOfset);
     connect(ui->actionRates, &QAction::triggered, this, &MainWindow::showRateDialog);
 
-
     //buttons
     connect(ui->pushButton_Connect, &QAbstractButton::clicked, this, &MainWindow::openConnDiag);
     connect(ui->pushButton_disconnect,  &QAbstractButton::clicked, this, &MainWindow::sigDeviceDisconnect);
@@ -47,40 +44,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pushButton_Reset, &QAbstractButton::clicked, this, &MainWindow::sigReset);
     connect(ui->pushButton_Reset,  &QAbstractButton::clicked, this, &MainWindow::sigDeviceDisconnect);
     connect(ui->pushButton_Reset,  &QAbstractButton::clicked, this, &MainWindow::deviceDisconnected);
-
-    //plot
-    ui->plot->xAxis->setLabel("Time [s]");
-    ui->plot->yAxis->setLabel("ADC value");
-    ui->plot->xAxis->setRange(0, 10);
-    ui->plot->yAxis->setRange(0, 65535);
-    ui->plot->addGraph();
-    ui->plot->setOpenGl(true);
-    ui->plot->setInteraction(QCP::iSelectPlottables, true);
-    ui->plot->setInteraction(QCP::iRangeDrag, true);
-    ui->plot->setInteraction(QCP::iRangeZoom);
-    ui->plot->axisRect()->setRangeDrag(Qt::Horizontal);
-    ui->plot->axisRect()->setRangeZoom(Qt::Horizontal);
-    ui->plot->setSelectionRectMode(QCP::srmNone);
-    ui->plot->graph(0)->setSelectable(QCP::stDataRange);
-    QPen selectionPen = ui->plot->graph(0)->pen();
-    selectionPen.setColor(QColor(255,0,0));
-    ui->plot->graph(0)->selectionDecorator()->setPen(selectionPen);
-
-    connect(ui->plot, &QCustomPlot::mousePress, this, &MainWindow::graphMousePressed);
-    connect(ui->plot, &QCustomPlot::mouseRelease, this, &MainWindow::graphMouseReleased);
-
-    //graph context menu
-    graphContextMenu.addAction(ui->actionStatistics);
-    graphContextMenu.addAction(ui->actionAdd_Regression);
-    graphContextMenu.addAction(ui->actionDelete_Regression);
-    graphContextMenu.addAction(ui->actionExport_Selection);
-
-    connect(ui->actionStatistics, &QAction::triggered, this, &MainWindow::showStatistics);
-    connect(ui->actionAdd_Regression, &QAction::triggered, this, &MainWindow::addRegression);
-    connect(ui->actionDelete_Regression, &QAction::triggered, this, &MainWindow::deleteRegression);
-
-    //sample list
-    ui->listWidget->setUniformItemSizes(true);
 }
 
 MainWindow::~MainWindow()
@@ -105,6 +68,7 @@ void MainWindow::deviceConnected()
     ui->pushButton_Reset->setEnabled(true);
     ui->actionRates->setEnabled(true);
     ui->actionRecalibrate_Offset->setEnabled(true);
+    ui->actionLoad_CSV->setEnabled(false);
     wasConnected = true;
     clearGraphAndListView();
     sigClear();
@@ -121,6 +85,7 @@ void MainWindow::deviceDisconnected()
     ui->pushButton_Reset->setEnabled(false);
     //ui->actionCallibration->setEnabled(false);
     ui->pushButton_Reset->setEnabled(false);
+    ui->actionLoad_CSV->setEnabled(true);
 
     ui->actionRates->setEnabled(false);
     ui->actionRecalibrate_Offset->setEnabled(false);
@@ -134,76 +99,43 @@ void MainWindow::deviceConnectionInProgress()
 
 void MainWindow::clearGraphAndListView()
 {
-    ui->listWidget->clear();
-    ui->plot->graph(0)->data().data()->clear();
-    ui->plot->xAxis->setRange(0, 10);
-    ui->plot->replot();
+    ui->plot->clear();
 
     ui->lcdNumber_Samples->display(0);
     ui->lcdNumber_SampleRate->display(0);
 }
 
-void MainWindow::newAdcSample(AdcSample sample, int number)
+void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit)
 {
-
-    ui->lcdNumber_Samples->display(number);
-    if(number > sampleMemoryLimit) sampleMemoryLimit = number;
+    if((end-1)->deltaTime != 0)ui->lcdNumber_SampleRate->display(1000000/(float)(end-1)->deltaTime);
+    ui->lcdNumber_Samples->display((int)number);
+    if(end-begin > sampleMemoryLimit) sampleMemoryLimit = end-begin;
+    ui->lcdNumber_bufferPercent->display((number/(float)sampleMemoryLimit)*100);
 
     QString buffer;
     QTextStream ss(&buffer);
-    ss<<sample.id<<": "<<sample.value<<"   |   dt: "<<sample.deltaTime<<" | "<<sample.timeStamp;
-    new QListWidgetItem( *ss.string(), ui->listWidget );
-    if(ui->listWidget->count() > listViewPointLimit) delete ui->listWidget->takeItem(0);
-    ui->listWidget->scrollToBottom();
-
-    ui->plot->graph(0)->addData(((double)sample.timeStamp)/1000000, sample.value);
-    ui->plot->replot(QCustomPlot::RefreshPriority::rpQueuedReplot);
-    QSharedPointer<QCPDataContainer<QCPGraphData>> data = ui->plot->graph(0)->data();
-    if(data->size() > graphPointLimit) data->remove(data->begin()->key);
-
-    if(sample.timeStamp/1000000 > 10)   ui->plot->xAxis->rescale();
-}
-
-void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit)
-{
-    ui->lcdNumber_Samples->display((int)number);
-    if(end-begin > sampleMemoryLimit) sampleMemoryLimit = end-begin;
-
-    for(std::vector<AdcSample>::iterator item = end-begin > listViewPointLimit ? end-listViewPointLimit : begin; item < end; item++ )
-    {
-        QString buffer;
-        QTextStream ss(&buffer);
-        ss<<item->id<<": "<<item->value<<"   |   dt: "<<item->deltaTime<<" | "<<item->timeStamp;
-        new QListWidgetItem( *ss.string(), ui->listWidget );
-        if(ui->listWidget->count() > listViewPointLimit) delete ui->listWidget->takeItem(0);
-        ui->listWidget->scrollToBottom();
-    }
-
-    if(reLimit && (end-begin) > graphPointLimit) graphPointLimit = end-begin;
+    ss<<"id: "<<(end-1)->id<<"  Value: "<<(end-1)->value<<"  dt: "<<(end-1)->deltaTime<<"  timestamp: "<<(end-1)->timeStamp;
+    ui->label_LatestSample->setText(buffer);
 
     QVector<double> keys;
     keys.reserve(end-begin);
     QVector<double> values;
     values.reserve(end-begin);
-    for(std::vector<AdcSample>::iterator item = (end-begin) > graphPointLimit ? end-graphPointLimit : begin; item < end; item++)
+    for(std::vector<AdcSample>::iterator item = ((end-begin) > ui->plot->getLimit() && !reLimit) ? end-ui->plot->getLimit() : begin; item < end; ++item)
     {
         keys.push_back(item->timeStamp/(double)1000000);
         values.push_back(item->value);
     }
 
-    ui->plot->graph(0)->addData(keys, values, true);
-    QSharedPointer<QCPDataContainer<QCPGraphData>> data = ui->plot->graph(0)->data();
-    while(data->size() > graphPointLimit) data->remove(data->begin()->key);
-    ui->plot->xAxis->rescale();
-    ui->plot->replot();
+    ui->plot->addData(keys, values, true, reLimit);
+    ui->plot->replot(QCustomPlot::rpQueuedRefresh);
 }
 
 void MainWindow::showLimitDialog()
 {
     LimitDialog limitDialog(this);
 
-    limitDialog.setGraphPointLimit(graphPointLimit);
-    limitDialog.setListViewPointLimit(listViewPointLimit);
+    limitDialog.setGraphPointLimit(ui->plot->getLimit());
     limitDialog.setSampleMemoryLimit(sampleMemoryLimit);
     limitDialog.show();
 
@@ -215,13 +147,8 @@ void MainWindow::showLimitDialog()
         sampleMemoryLimit = limitDialog.getSampleMemoryLimit();
         ui->lcdNumber_bufferPercent->display((int)(samplenumber/(float)sampleMemoryLimit*100));
 
-        graphPointLimit = limitDialog.getGraphLimit();
-        QSharedPointer<QCPDataContainer<QCPGraphData>> data = ui->plot->graph(0)->data();
-        while(data->size() > graphPointLimit) data->remove(data->begin()->key);
+        ui->plot->setLimit(limitDialog.getGraphLimit());
         ui->plot->replot(QCustomPlot::RefreshPriority::rpQueuedReplot);
-
-        listViewPointLimit = limitDialog.getListLimit();
-        while(ui->listWidget->count() > listViewPointLimit) delete ui->listWidget->takeItem(0);
     }
 }
 
@@ -267,98 +194,11 @@ void MainWindow::replot()
         if(replotDiag.exec() == 0 && replotDiag.getFrom() < replotDiag.getTo())
         {
             clearGraphAndListView();
-            graphPointLimit = replotDiag.getTo() - replotDiag.getFrom();
+            ui->plot->setLimit(replotDiag.getTo() - replotDiag.getFrom());
             sigReplot(replotDiag.getFrom(), replotDiag.getTo());
         }
     }
     else QMessageBox::warning(this, "Warning", "No samples", QMessageBox::Ok);
-}
-
-void MainWindow::graphMousePressed(QMouseEvent *event)
-{
-    if(event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && event->modifiers() == Qt::Modifier::SHIFT) )
-    {
-        setCursor(Qt::ClosedHandCursor);
-        ui->plot->setSelectionRectMode(QCP::srmNone);
-    }
-    else if(event->button() == Qt::LeftButton)
-    {
-        ui->plot->setSelectionRectMode(QCP::srmSelect);
-    }
-    else if(event->button() == Qt::RightButton)
-    {
-        graphContextMenu.popup(event->globalPos());
-        ui->plot->setSelectionRectMode(QCP::srmNone);
-    }
-}
-
-void MainWindow::graphMouseReleased(QMouseEvent *event)
-{
-    setCursor(Qt::ArrowCursor);
-}
-
-void MainWindow::showStatistics()
-{
-    if(!ui->plot->graph(0)->selection().dataRanges().at(0).isEmpty())
-    {
-        StatisticsDialog statDiag(ui->plot->graph(0)->selection().dataRanges().at(0), ui->plot->graph(0)->data(), this);
-        statDiag.show();
-        statDiag.exec();
-    }
-    else QMessageBox::warning(this, "Warning", "No selection has been made", QMessageBox::Ok);
-}
-
-void MainWindow::addRegression()
-{
-    if(!ui->plot->graph(0)->selection().dataRanges().at(0).isEmpty())
-    {
-        QCPDataRange range = ui->plot->graph(0)->selection().dataRanges().at(0);
-        QSharedPointer< QCPGraphDataContainer > data = ui->plot->graph(0)->data();
-
-        QCPGraphDataContainer::const_iterator begin = data->at(range.begin());
-        QCPGraphDataContainer::const_iterator end = data->at(range.end());
-
-        double sumValues = 0;
-        double sumKeys = 0;
-        double sumValuesTimesKeys = 0;
-        double sumSquaredKeys = 0;
-        for (QCPGraphDataContainer::const_iterator item=begin; item != end; item++)
-        {
-            sumValues += item->value;
-            sumKeys += item->key;
-            sumSquaredKeys += item->key*item->key;
-            sumValuesTimesKeys += item->value*item->key;
-        }
-
-        double slope = (sumValuesTimesKeys - (sumKeys*sumValues)/range.size()) / (sumSquaredKeys - (sumKeys*sumKeys)/range.size());
-        double offset = sumValues/range.size() - slope*(sumKeys/range.size());
-
-        QPen regressionPen = ui->plot->graph(0)->pen();
-        regressionPen.setColor(QColor(0,255,0));
-
-        QPen selectionPen = ui->plot->graph(0)->pen();
-        selectionPen.setColor(QColor(255,0,0));
-
-        QCPGraphDataContainer::const_iterator center = begin + (end - begin)/2;
-
-        ui->plot->addGraph();
-        ui->plot->graph(ui->plot->graphCount()-1)->setPen(regressionPen);
-        ui->plot->graph(ui->plot->graphCount()-1)->addData(100+center->key, slope*(100+center->key) + offset);
-        ui->plot->graph(ui->plot->graphCount()-1)->addData(-100+center->key, slope*(-100+center->key) + offset);
-        ui->plot->graph(ui->plot->graphCount()-1)->selectionDecorator()->setPen(selectionPen);
-        ui->plot->replot();
-
-    }
-    else QMessageBox::warning(this, "Warning", "No selection has been made", QMessageBox::Ok);
-}
-
-void MainWindow::deleteRegression()
-{
-    if( ui->plot->selectedGraphs().size() > 1 && ui->plot->selectedGraphs().at(1) != ui->plot->graph(0))
-    {
-        ui->plot->removeGraph(ui->plot->selectedGraphs().at(1));
-        ui->plot->replot();
-    }
 }
 
 void MainWindow::connectionFailed(QString errorMsg)

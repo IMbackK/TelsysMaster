@@ -17,9 +17,7 @@ public:
 
     int getSampleMemoryLimit();
     int getGraphLimit();
-    int getListLimit();
     void setGraphPointLimit(int i);
-    void setListViewPointLimit(int i);
     void setSampleMemoryLimit(int i);
 
 public slots:

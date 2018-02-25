@@ -38,7 +38,11 @@ SOURCES += \
     callibrationdialog.cpp \
     replotdiag.cpp \
     ratedialog.cpp \
-    statisticsdialog.cpp
+    statisticsdialog.cpp \
+    utilitys.cpp \
+    regessioncalculator.cpp \
+    plot.cpp \
+    regressiondiag.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -53,7 +57,11 @@ HEADERS += \
     callibrationdialog.h \
     replotdiag.h \
     ratedialog.h \
-    statisticsdialog.h
+    statisticsdialog.h \
+    utilitys.h \
+    regessioncalculator.h \
+    plot.h \
+    regressiondiag.h
 
 FORMS += \
         mainwindow.ui \
@@ -62,4 +70,5 @@ FORMS += \
     callibrationdialog.ui \
     replotdiag.ui \
     ratedialog.ui \
-    statisticsdialog.ui
+    statisticsdialog.ui \
+    regressiondiag.ui

@@ -6,6 +6,7 @@
 #include <QMenu>
 #include "sampleparser.h"
 
+
 namespace Ui {
 class MainWindow;
 }
@@ -18,16 +19,13 @@ private:
 
     bool wasConnected = false;
 
-    int graphPointLimit = 10000;
-    int listViewPointLimit = 100;
-
     int sampleMemoryLimit = 100000;
-
-    QMenu graphContextMenu;
 
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+
+    void newAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit);
 
 signals:
     void openConnDiag();
@@ -51,8 +49,6 @@ public slots:
     void deviceDisconnected();
     void connectionFailed(QString errorMsg);
     void setGraphLimit(double in);
-    void newAdcSample(AdcSample sample, int amountNowStored);
-    void newAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit);
     void showRateDialog();
 
 private slots:
@@ -63,18 +59,11 @@ private slots:
     void loadCsv();
     void clearGraphAndListView();
 
+    //virtual void show();
+
     //dialogs
     void showLimitDialog();
     void replot();
-
-    //graph
-    void graphMousePressed(QMouseEvent* event);
-    void graphMouseReleased(QMouseEvent* event);
-
-    //context Menu
-    void showStatistics();
-    void addRegression();
-    void deleteRegression();
 
 private:
     void onStart();

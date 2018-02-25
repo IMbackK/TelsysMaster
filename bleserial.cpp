@@ -53,7 +53,17 @@ void BleSerial::deviceDisconnect()
 void BleSerial::write(uint8_t* data, size_t length)
 {
     if(isConnected()) gattlib_write_char_by_uuid(_connection, &txUuid, data, length);
-    for(int i = 0; i < length; i++)qDebug()<<(char)data[i];
+    for(size_t i = 0; i < length; i++)qDebug()<<(char)data[i];
+}
+
+void BleSerial::setAdcPacketCallback(std::function<void(const uint8_t*, size_t)> cb)
+{
+    adcPaketCallback = cb;
+}
+
+void BleSerial::setAuxPacketCallback(std::function<void(const uint8_t*, size_t)> cb)
+{
+    auxPaketCallback = cb;
 }
 
 void BleSerial::connectionCallback(/*gatt_connection_t* connection*/)
@@ -115,8 +125,8 @@ void BleSerial::notificationCallback(const uuid_t* uuid, const uint8_t* data, si
 {
     BleSerial* instance  = static_cast<BleSerial*>(instanceVoid); //regretably due to a gattlib bug this is gets invalid poniter.
 
-    if(gattlib_uuid_cmp(uuid, &bleSerialNotifyInstance->adcUuid) == 0)bleSerialNotifyInstance->recivedAdcPacket(data, length);
-    else if(gattlib_uuid_cmp(uuid, &bleSerialNotifyInstance->auxUuid) == 0)bleSerialNotifyInstance->recivedAuxPacket(data, length);
+    if(gattlib_uuid_cmp(uuid, &bleSerialNotifyInstance->adcUuid) == 0 && bleSerialNotifyInstance->adcPaketCallback)bleSerialNotifyInstance->adcPaketCallback(data, length);
+    else if(gattlib_uuid_cmp(uuid, &bleSerialNotifyInstance->auxUuid) == 0 && bleSerialNotifyInstance->auxPaketCallback)bleSerialNotifyInstance->auxPaketCallback(data, length);
 }
 
 void BleSerial::reset()

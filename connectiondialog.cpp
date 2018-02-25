@@ -30,13 +30,19 @@ ConnectionDialog::ConnectionDialog(BleScanner* discoverer, QWidget *parent) :
     connect(ui->pushButton_scann, &QPushButton::clicked, this, [this](){this->toggleScann();});
     connect(_discoverer, &BleScanner::discoverdDevice, this, &ConnectionDialog::deviceFound);
     connect(_discoverer, &BleScanner::finishedScanning, this, &ConnectionDialog::scannFinished);
+
 }
 
 ConnectionDialog::~ConnectionDialog()
 {
+    if(_discoverer->getScanning())
+    {
+        stopScan();
+    }
     ui->listWidget->clear();
     _discoverdDevices.clear();
     delete ui;
+
 }
 
 void ConnectionDialog::reject()

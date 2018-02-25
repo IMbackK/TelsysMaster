@@ -6,6 +6,7 @@ LimitDialog::LimitDialog(QWidget *parent) :
     ui(new Ui::LimitDialog)
 {
     ui->setupUi(this);
+    setFixedSize(size());
 }
 
 LimitDialog::~LimitDialog()
@@ -33,12 +34,6 @@ void LimitDialog::setSampleMemoryLimit(int i)
     ui->spinBox_sampleMemory->setValue(i);
 }
 
-
-void LimitDialog::setListViewPointLimit(int i)
-{
-    ui->spinBox_list->setValue(i);
-}
-
 int LimitDialog::getSampleMemoryLimit()
 {
     return ui->spinBox_sampleMemory->value();
@@ -47,9 +42,4 @@ int LimitDialog::getSampleMemoryLimit()
 int LimitDialog::getGraphLimit()
 {
     return ui->spinBox_graph->value();
-}
-
-int LimitDialog::getListLimit()
-{
-    return ui->spinBox_list->value();
 }

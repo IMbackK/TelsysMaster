@@ -1,6 +1,7 @@
 #ifndef SAMPLEPARSER_H
 #define SAMPLEPARSER_H
 
+#include<functional>
 #include <QObject>
 #include <QString>
 
@@ -23,6 +24,7 @@ public:
     Point3D<int16_t> accel;
     Point3D<int16_t> magn;
     uint8_t temperature;
+    uint64_t timeStamp;
     uint64_t id;
 };
 
@@ -42,21 +44,23 @@ private:
 
     unsigned sampleCountLimit = 100000;
 
+    std::function<void(std::vector<AdcSample>::iterator, std::vector<AdcSample>::iterator, unsigned, bool)> adcSampleCallback;
+    std::function<void(const AuxSample&)> auxSampleCallback;
+
 public:
 
     std::vector<AdcSample> adcSamples;
     std::vector<AuxSample> auxSamples;
 
+    void setAdcSampleCallback(std::function<void(std::vector<AdcSample>::iterator, std::vector<AdcSample>::iterator, unsigned, bool)> cb);
+    void setAuxSampleCallback(std::function<void(const AuxSample&)> cb);
+
     int getLimit();
 
 public:
     explicit SampleParser(QObject *parent = nullptr);
-
-signals:
-    void gotAdcSample(AdcSample sample, int amountNowStored);
-    void gotAuxSample(AuxSample sample, int amountNowStored);
-
-    void gotAdcSamples(std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned number, bool reLimit);
+    void decodeAdcData(const uint8_t *data, size_t length);
+    void decodeAuxData(const uint8_t *data, size_t length);
 
 public slots:
     void clear();
@@ -64,9 +68,6 @@ public slots:
     void resendRange(unsigned int from, unsigned int to);
     void saveCsv(QString fileName);
     void loadCsv(QString fileName);
-    void decodeAdcData(const uint8_t *data, size_t length);
-    void decodeAuxData(const uint8_t *data, size_t length);
-
     void setLimit(unsigned newSampleCountLimit);
 
 private:
