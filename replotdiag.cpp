@@ -9,7 +9,13 @@ ReplotDiag::ReplotDiag(unsigned maxVal, QWidget *parent) :
     ui->spinBox_from->setMaximum(maxVal);
     ui->spinBox_to->setMaximum(maxVal);
     ui->spinBox_to->setValue(maxVal);
+#ifdef Q_OS_LINUX
     setFixedSize(size());
+#endif
+
+#ifdef Q_OS_ANDROID
+    setWindowState(Qt::WindowMaximized);
+#endif
 }
 
 void ReplotDiag::accept()

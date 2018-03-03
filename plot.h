@@ -17,12 +17,17 @@ private:
 
     QMenu graphContextMenu;
 
+#ifndef Q_OS_ANDROID
     unsigned graphPointLimit = 10000;
+#else
+    unsigned graphPointLimit = 2000;
+#endif
 
     QAction actionStatistics;
     QAction actionAdd_Regression;
     QAction actionDelete_Regression;
     QAction actionExport_Selection;
+    QAction actionSetValueString;
 
     QString lable = "Value";
 
@@ -48,6 +53,7 @@ public slots:
     void showStatistics();
     void deleteRegression();
     void addRegression();
+    void askForValueString();
 
     void addData(QVector<double> keys, QVector<double> values, bool inOrder = false, bool ignoreLimit = false);
     void addData(double key, double value, bool ignoreLimit = false);
@@ -55,6 +61,7 @@ public slots:
 protected:
     virtual void mousePressEvent(QMouseEvent *event);
     virtual void mouseReleaseEvent(QMouseEvent *event);
+    virtual bool event(QEvent *event);
 
 private:
     void addMainGraph();

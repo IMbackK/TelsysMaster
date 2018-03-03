@@ -38,6 +38,10 @@ StatisticsDialog::StatisticsDialog(QCPDataRange dataRange, QSharedPointer< QCPGr
 
     ui->lcdNumber_deltaT->display((end-1)->key-begin->key);
 
+#ifdef Q_OS_ANDROID
+    setWindowState(Qt::WindowMaximized);
+#endif
+
 }
 
 void StatisticsDialog::copyCount()

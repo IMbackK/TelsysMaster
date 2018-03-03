@@ -6,7 +6,14 @@ RateDialog::RateDialog(QWidget *parent) :
     ui(new Ui::RateDialog)
 {
     ui->setupUi(this);
+
+#ifdef Q_OS_LINUX
     setFixedSize(size());
+#endif
+
+#ifdef Q_OS_ANDROID
+    setWindowState(Qt::WindowMaximized);
+#endif
 }
 
 RateDialog::~RateDialog()

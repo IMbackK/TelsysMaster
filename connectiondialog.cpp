@@ -5,21 +5,6 @@
 #include <QDebug>
 #include <QListWidgetItem>
 
-
-#include <unistd.h>
-
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/hci_lib.h>
-
-#include <cerrno>
-#include <unistd.h>
-
-#include "blepp/logging.h"
-#include "blepp/pretty_printers.h"
-#include "blepp/blestatemachine.h"
-#include "blepp/lescan.h"
-
 ConnectionDialog::ConnectionDialog(BleScanner* discoverer, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ConnectionDialog),
@@ -30,6 +15,13 @@ ConnectionDialog::ConnectionDialog(BleScanner* discoverer, QWidget *parent) :
     connect(ui->pushButton_scann, &QPushButton::clicked, this, [this](){this->toggleScann();});
     connect(_discoverer, &BleScanner::discoverdDevice, this, &ConnectionDialog::deviceFound);
     connect(_discoverer, &BleScanner::finishedScanning, this, &ConnectionDialog::scannFinished);
+
+    connect(ui->listWidget, &QListWidget::itemSelectionChanged, this, &ConnectionDialog::listItemSelected);
+
+
+#ifdef Q_OS_ANDROID
+    setWindowState(Qt::WindowMaximized);
+#endif
 
 }
 
@@ -75,6 +67,12 @@ void ConnectionDialog::accept()
         }
         done(0);
     }
+}
+
+void ConnectionDialog::listItemSelected()
+{
+    int index = ui->listWidget->currentRow();
+    if(index < _discoverdDevices.size())ui->lineEdit->setText(_discoverdDevices[index].address);
 }
 
 

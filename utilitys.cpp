@@ -6,8 +6,10 @@
 #include <QDebug>
 #include <QStringList>
 #include <QMessageBox>
+#include <thread>
+#include <stdexcept>
 
-void saveToCsv(const QString& filename, std::vector<AdcSample>* adcSamples, std::vector<AuxSample>* auxSamples )
+bool saveToCsv(const QString& filename, const std::vector<AdcSample>* adcSamples, const std::vector<AuxSample>* auxSamples )
 {
     QFile file(filename);
     if(file.open(QIODevice::WriteOnly | QIODevice::Text) && adcSamples != nullptr)
@@ -26,11 +28,36 @@ void saveToCsv(const QString& filename, std::vector<AdcSample>* adcSamples, std:
                           <<auxSamples->at(i).temperature<<'\n';
             }
             else if(auxSamples != nullptr) fileStream<<",,,,,,,,,\n";
-            else fileStream<<'\n';
+            else if(auxSamples == nullptr)fileStream<<'\n';
         }
         fileStream.flush();
         file.close();
+        return true;
     }
+    return false;
+}
+
+bool saveToCsv(const QString& filename, const std::vector<double> &keys, const std::vector<double> &values, const QString& keyLable, const QString& valueLable )
+{
+    if(keys.size() != values.size())
+    {
+        throw std::invalid_argument("keys and values need to be the same size");
+        return false;
+    }
+    QFile file(filename);
+    if(file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        QTextStream fileStream(&file);
+        fileStream<<"id"<<','<<keyLable<<','<<valueLable<<'\n';
+        for(size_t i = 0; i < keys.size(); i++)
+        {
+            fileStream<<i<<','<<keys[i]<<','<<values[i]<<'\n';
+        }
+        fileStream.flush();
+        file.close();
+        return true;
+    }
+    return false;
 }
 
 void sendStart(BleSerial* bleSerial)

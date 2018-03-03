@@ -4,8 +4,10 @@
 #include <QString>
 #include <QThread>
 #include <functional>
+#include <QtBluetooth/qbluetooth.h>
+#include <QtBluetooth/qlowenergycontroller.h>
+#include <QtBluetooth/qbluetoothuuid.h>
 
-#include "gattlib.h"
 #include "blescanner.h"
 
 
@@ -15,21 +17,19 @@ class BleSerial : public QObject
 private:
     void* _adapter;
 
-    gatt_connection_t* _connection = NULL;
+    QLowEnergyController* _leController = nullptr;
+    QLowEnergyService* _telsysService = nullptr;
+    QLowEnergyCharacteristic _txChar;
 
-    uuid_t txUuid;
-    uuid_t adcUuid;
-    uuid_t auxUuid;
-
-    bool _foundService = false;
-
-    QThread* _connectTread = nullptr;
+    QBluetoothUuid txUuid;
+    QBluetoothUuid adcUuid;
+    QBluetoothUuid auxUuid;
 
     std::function<void(const uint8_t*, size_t)> adcPaketCallback;
     std::function<void(const uint8_t*, size_t)> auxPaketCallback;
 
 public:
-    BleSerial(void* adapter, bool setInstance = true);
+    BleSerial(QString adapter = "");
     ~BleSerial();
 
     bool isConnected();
@@ -49,17 +49,15 @@ public slots:
     void connectTo(const BleDiscoveredDevice info);
     void connectToAdress(const std::string adress);
 
+
     void write(uint8_t* data, size_t length);
 
     void deviceDisconnect();
 
 private slots:
-    void connectionCallback(/*gatt_connection_t* connection*/);
+    void characteristicChange(const QLowEnergyCharacteristic &characteristic, const QByteArray &data);
+    void serviceScanFinished();
 
-private:
-
-    static void notificationCallback(const uuid_t* uuid, const uint8_t* data, size_t length,  void* instanceVoid);
-    static void staticConnectionCallback(gatt_connection_t* connection);
 };
 
 #endif // BTLESERIAL_H

@@ -10,6 +10,10 @@
 #include <QColor>
 #include <replotdiag.h>
 
+#ifdef Q_OS_ANDROID
+#include <QAndroidJniObject>
+#endif
+
 #include "plot.h"
 
 #include "limitdialog.h"
@@ -39,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionReplot, &QAction::triggered, this, &MainWindow::replot);
     connect(ui->actionRecalibrate_Offset, &QAction::triggered, this, &MainWindow::sigRecalOfset);
     connect(ui->actionRates, &QAction::triggered, this, &MainWindow::showRateDialog);
+    connect(ui->actionAbout_Qt, &QAction::triggered, this, [this](){QMessageBox::aboutQt(this);});
 
     //buttons
     connect(ui->pushButton_Connect, &QAbstractButton::clicked, this, &MainWindow::openConnDiag);
@@ -49,10 +54,37 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pushButton_Reset, &QAbstractButton::clicked, this, &MainWindow::sigReset);
     connect(ui->pushButton_Reset,  &QAbstractButton::clicked, this, &MainWindow::sigDeviceDisconnect);
     connect(ui->pushButton_Reset,  &QAbstractButton::clicked, this, &MainWindow::deviceDisconnected);
+
+
+    //submenus dont work sanely on android
+#ifdef Q_OS_ANDROID
+    ui->menuBar->addAction(ui->actionSave_CSV);
+    ui->menuBar->addAction(ui->actionSave_PNG);
+    ui->menuBar->addAction(ui->actionRecalibrate_Offset);
+    ui->menuBar->addAction(ui->actionCalibration);
+    ui->menuBar->addAction(ui->actionReplot);
+    ui->menuBar->addAction(ui->actionRates);
+    ui->menuBar->addAction(ui->actionClear);
+
+    ui->menuBar->removeAction(ui->menuConfigure->menuAction());
+    ui->menuBar->removeAction(ui->menuhello->menuAction());
+    ui->menuBar->removeAction(ui->menuHelp->menuAction());
+    ui->menuBar->removeAction(ui->menuSamples->menuAction());
+
+    QFont font = ui->menuBar->font();
+    font.setPointSize(24);
+    ui->menuBar->setFont(font);
+
+    ui->label_LatestAuxSample->hide();
+    ui->label_LatestSample->hide();
+    ui->menuBar->setNativeMenuBar(false);
+#endif
+
 }
 
 MainWindow::~MainWindow()
 {
+    children();
     delete ui;
 }
 
@@ -81,8 +113,7 @@ void MainWindow::deviceConnected()
 void MainWindow::deviceDisconnected()
 {
     ui->label_Connected->setText("Disconnected");
-    if(wasConnected)QMessageBox::information(this, "Info", "Due to a bug in gattlib it is currently not possible to reconnect. Please restart the application to reconnect to device.", QMessageBox::Ok);
-    else ui->pushButton_Connect->setEnabled(true);
+    ui->pushButton_Connect->setEnabled(true);
     ui->pushButton_disconnect->setEnabled(false);
     ui->pushButton_run->setEnabled(false);
     ui->pushButton_stop->setEnabled(false);
@@ -106,28 +137,31 @@ void MainWindow::clearGraphs()
     ui->plot->clear();
     ui->lcdNumber_Samples->display(0);
     ui->lcdNumber_SampleRate->display(0);
+
+    #ifndef Q_OS_ANDROID
     ui->label_LatestSample->setText("");
+    #endif
 
     //aux view
     ui->plot_accl->clear();
+    #ifndef Q_OS_ANDROID
     ui->label_LatestAuxSample->setText("");
+    #endif
 
 }
 
 void MainWindow::newAuxSample(const AuxSample& sample)
 {
-    QString buffer;
-    QTextStream ss(&buffer);
-
     Point3D<double> scaledAccel = sample.accel.scale(sample.accelScale);
 
     ui->plot_accl->addData(sample.timeStamp/(float)1000000, scaledAccel.amplitude());
 
-    ss<<"Timestamp: "<<sample.timeStamp<<" Acceleration Amplitude: "<<scaledAccel.amplitude()
-      <<"  Acceleration xyz: "<<scaledAccel.x<<','<<scaledAccel.y<<','<<scaledAccel.z
-      <<"  Magnetic vec xyz: "<<sample.magn.x<<','<<sample.magn.y<<','<<sample.magn.z
-      <<"  Temperature: "<<sample.temperature;
+    #ifndef Q_OS_ANDROID
+    QString buffer;
+    QTextStream ss(&buffer);
+    ss<<"Timestamp: "<<sample.timeStamp<<"  Temperature: "<<sample.temperature<<" Acceleration Amplitude: "<<scaledAccel.amplitude();
     ui->label_LatestAuxSample->setText(buffer);
+    #endif
 
     if(!ui->tab_2->isHidden()) ui->plot_accl->replot(QCustomPlot::rpQueuedRefresh);
 }
@@ -139,10 +173,12 @@ void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vect
     if(end-begin > sampleMemoryLimit) sampleMemoryLimit = end-begin;
     ui->lcdNumber_bufferPercent->display((number/(float)sampleMemoryLimit)*100);
 
+    #ifndef Q_OS_ANDROID
     QString buffer;
     QTextStream ss(&buffer);
     ss<<"id: "<<(end-1)->id<<"  Value: "<<(end-1)->value<<"  dt: "<<(end-1)->deltaTime<<"  timestamp: "<<(end-1)->timeStamp;
     ui->label_LatestSample->setText(buffer);
+    #endif
 
     QVector<double> keys;
     keys.reserve(end-begin);
@@ -198,7 +234,18 @@ void MainWindow::tabChanged()
 
 void MainWindow::savePdf()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, "Save graph as PDF", "./", "*.pdf" );
+#ifdef Q_OS_ANDROID
+    QAndroidJniObject mediaDir = QAndroidJniObject::callStaticObjectMethod("android/os/Environment", "getExternalStorageDirectory", "()Ljava/io/File;");
+    QAndroidJniObject mediaPath = mediaDir.callObjectMethod( "getAbsolutePath", "()Ljava/lang/String;" );
+
+    QString fileName = mediaPath.toString()+"/graph.pdf";
+
+    QMessageBox::information(this, "Saved", "saved to "+fileName, QMessageBox::Ok);
+
+#else
+    QString fileName = QFileDialog::getSaveFileName(this, "Save CSV", "./", "*.csv" );
+#endif
+
     if(!fileName.isEmpty())
     {
         if(ui->tabWidget->currentIndex() == 0)ui->plot->savePdf(fileName);
@@ -208,7 +255,17 @@ void MainWindow::savePdf()
 
 void MainWindow::saveCsv()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, "Save data as CSV", "./", "*.csv" );
+#ifdef Q_OS_ANDROID
+    QAndroidJniObject mediaDir = QAndroidJniObject::callStaticObjectMethod("android/os/Environment", "getExternalStorageDirectory", "()Ljava/io/File;");
+    QAndroidJniObject mediaPath = mediaDir.callObjectMethod( "getAbsolutePath", "()Ljava/lang/String;" );
+
+    QString fileName = mediaPath.toString()+"/samples.csv";
+
+    QMessageBox::information(this, "Saved", "saved to "+fileName, QMessageBox::Ok);
+
+#else
+    QString fileName = QFileDialog::getSaveFileName(this, "Save graph as PDF", "./", "*.pdf" );
+#endif
     if(!fileName.isEmpty()) sigSaveCsv(fileName);
 }
 

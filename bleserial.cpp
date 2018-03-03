@@ -1,28 +1,20 @@
 #include "bleserial.h"
 #include <QDebug>
+#include <QCoreApplication>
 
 #define SERVICE_UUID "66410001-b565-4284-d0a8-54775812af9e"
 #define TX_UUID      "66410002-b565-4284-d0a8-54775812af9e"
 #define ADC_UUID      "66410003-b565-4284-d0a8-54775812af9e"
 #define AUX_UUID       "66410004-b565-4284-d0a8-54775812af9e"
 
-//WARNING: HACK
-//regretably due to a gattlib bug gattlib_event_handler_t dose not pass user_data. Also gatt_connect_cb_t contains no user_data parameter therfore this hack is requierd.
-static BleSerial* bleSerialNotifyInstance = nullptr;
-
-BleSerial::BleSerial(void* adapter, bool setInstance): _adapter(adapter)
+BleSerial::BleSerial(QString adapter): txUuid(QString(TX_UUID)), adcUuid(QString(ADC_UUID)), auxUuid(QString(AUX_UUID))
 {
-     if(setInstance) bleSerialNotifyInstance = this;
-
-     gattlib_string_to_uuid(TX_UUID, strlen(TX_UUID), &txUuid);
-     gattlib_string_to_uuid(ADC_UUID, strlen(ADC_UUID), &adcUuid);
-     gattlib_string_to_uuid(AUX_UUID, strlen(AUX_UUID), &auxUuid);
+    qDebug()<<"uuid: "<<txUuid;
 }
 
 BleSerial::~BleSerial()
 {
     reset();
-    if(bleSerialNotifyInstance == this) bleSerialNotifyInstance = nullptr;
 }
 
 void BleSerial::connectTo(const BleDiscoveredDevice info)
@@ -30,15 +22,9 @@ void BleSerial::connectTo(const BleDiscoveredDevice info)
    connectToAdress(info.address.toStdString());
 }
 
-void BleSerial::staticConnectionCallback(gatt_connection_t* connection)
-{
-    qDebug()<<"Conncb\n";
-    bleSerialNotifyInstance->connectionCallback();
-}
-
 bool BleSerial::isConnected()
 {
-    return _connection != NULL;
+    return _telsysService != nullptr;
 }
 
 void BleSerial::deviceDisconnect()
@@ -52,8 +38,11 @@ void BleSerial::deviceDisconnect()
 
 void BleSerial::write(uint8_t* data, size_t length)
 {
-    if(isConnected()) gattlib_write_char_by_uuid(_connection, &txUuid, data, length);
-    for(size_t i = 0; i < length; i++)qDebug()<<(char)data[i];
+    if(isConnected())
+    {
+        qDebug()<<"attempting write";
+        _telsysService->writeCharacteristic(_txChar, QByteArray((char*)data, length), QLowEnergyService::WriteWithoutResponse);
+    }
 }
 
 void BleSerial::setAdcPacketCallback(std::function<void(const uint8_t*, size_t)> cb)
@@ -66,77 +55,98 @@ void BleSerial::setAuxPacketCallback(std::function<void(const uint8_t*, size_t)>
     auxPaketCallback = cb;
 }
 
-void BleSerial::connectionCallback(/*gatt_connection_t* connection*/)
+void BleSerial::connectToAdress(const std::string address)
 {
-    delete _connectTread;
-    _connectTread = nullptr;
-    //_connection = connection;
-    if (!isConnected())
-    {
-            deviceDisconnected("Can not connect to Btle Device");
-    }
-    else
-    {
-        deviceConnected();
-        gattlib_characteristic_t* characteristics;
-        int characteristicsLength;
-        int errorCode;
-        errorCode = gattlib_discover_char(_connection, &characteristics, &characteristicsLength);
-        if(errorCode)
-        {
-            deviceDisconnected("Can not discover Characteristics");
-        }
-        else
-        {
-            for (int i = 0; i < characteristicsLength; i++)
-            {
-                char buffer[256];
-                gattlib_uuid_to_string(&characteristics[i].uuid, buffer, 256);
-                qDebug()<<buffer<<'\n';
+    reset();
+    QBluetoothDeviceInfo info(QBluetoothAddress(address.c_str()), "info", 0);
+    info.setCoreConfigurations(QBluetoothDeviceInfo::LowEnergyCoreConfiguration);
 
-                if(gattlib_uuid_cmp(&characteristics[i].uuid, &txUuid) == 0)
+    qDebug()<<"info: "<<info.address();
+
+     _leController = QLowEnergyController::createCentral(info);
+     connect(_leController, &QLowEnergyController::connected, this, [this](){this->_leController->discoverServices();});
+     connect(_leController, SIGNAL(error), this, SLOT([this](QLowEnergyController::Error error){this->deviceDisconnected("Connection Failed");}));
+     connect(_leController, &QLowEnergyController::discoveryFinished, this, [this](){this->serviceScanFinished();});
+
+     qDebug()<<"connecting to device: "<<info.address()<<'\n';
+     deviceConnectionInProgress();
+     _leController->setRemoteAddressType(QLowEnergyController::RandomAddress);
+     _leController->connectToDevice();
+}
+
+void BleSerial::serviceScanFinished()
+{
+    for(int i = 0; i < _leController->services().size(); i++)
+    {
+        QBluetoothUuid uuid = _leController->services()[i];
+        qDebug()<<"service with uuid: "<<uuid;
+        if (uuid == QBluetoothUuid(QString(SERVICE_UUID)))
+        {
+            qDebug()<<"service mached";
+            _telsysService = _leController->createServiceObject(uuid, nullptr);
+
+            if (_telsysService)
+            {
+                if(_telsysService->state() == QLowEnergyService::DiscoveryRequired)
                 {
-                    _foundService = true;
+                    qDebug()<<"char discovery needed";
+                    _telsysService->discoverDetails();
+                    while(_telsysService->state() == QLowEnergyService::DiscoveringServices)QCoreApplication::processEvents();
                 }
-
+                qDebug()<<"service connected has"<<_telsysService->characteristics().size()<<"chars";
+                for(int i =0; i <  _telsysService->characteristics().size(); i++)
+                {
+                    QLowEnergyCharacteristic tmp = _telsysService->characteristics()[i];
+                    if(tmp.properties() & QLowEnergyCharacteristic::Notify)
+                    {
+                        auto notificationDes = tmp.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration);
+                        _telsysService->writeDescriptor(notificationDes, QByteArray::fromHex("0100"));
+                    }
+                    qDebug()<<"characteristic with uuid: "<<_telsysService->characteristics().at(i).uuid();
+                }
+                _txChar = _telsysService->characteristic(txUuid);
+                if(!_txChar.isValid())
+                {
+                    deviceDisconnected("Connected to tx characteristic");
+                    qDebug()<<"Tx char invalid";
+                }
+                connect(_telsysService, &QLowEnergyService::characteristicChanged, this, &BleSerial::characteristicChange);
             }
-            if(_foundService == false) deviceDisconnected("Device Dose not Support Requierd services.\n");
-            else
-            {
-                uint16_t enable_notification = 0x0001;
-                gattlib_write_char_by_uuid(_connection, &txUuid, &enable_notification, sizeof(enable_notification));
-                gattlib_register_notification(_connection, &notificationCallback, static_cast<void*>(this)); //regretably due to a gattlib bug this pointer is not really passed.
-                gattlib_notification_start(_connection, &adcUuid);
-                gattlib_notification_start(_connection, &auxUuid);
-            }
+            else reset();
         }
     }
+    this->deviceConnected();
+    if(_telsysService == nullptr)
+    {
+        reset();
+        deviceDisconnected("Connected Device dose not provide Telsys Service.");
+    }
+    qDebug()<<"serviceScanFinished";
 }
 
-void BleSerial::connectToAdress(const std::string adress)
+void BleSerial::characteristicChange(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
-    _connectTread = QThread::create([adress, this](){this->_connection = gattlib_connect(NULL, adress.c_str(), BDADDR_LE_PUBLIC, BT_SEC_LOW, 0, 0);});
-    connect(_connectTread, &QThread::finished, this, &BleSerial::connectionCallback);
-    deviceConnectionInProgress();
-    _connectTread->start();
-}
-
-void BleSerial::notificationCallback(const uuid_t* uuid, const uint8_t* data, size_t length,  void* instanceVoid)
-{
-    BleSerial* instance  = static_cast<BleSerial*>(instanceVoid); //regretably due to a gattlib bug this is gets invalid poniter.
-
-    if(gattlib_uuid_cmp(uuid, &bleSerialNotifyInstance->adcUuid) == 0 && bleSerialNotifyInstance->adcPaketCallback)bleSerialNotifyInstance->adcPaketCallback(data, length);
-    else if(gattlib_uuid_cmp(uuid, &bleSerialNotifyInstance->auxUuid) == 0 && bleSerialNotifyInstance->auxPaketCallback)bleSerialNotifyInstance->auxPaketCallback(data, length);
+    if(characteristic.uuid() == adcUuid)
+    {
+        adcPaketCallback((const uint8_t*)data.constData(), data.size());
+    }
+    else if(characteristic.uuid() == auxUuid)
+    {
+        auxPaketCallback((const uint8_t*)data.constData(), data.size());
+    }
 }
 
 void BleSerial::reset()
 {
-    _foundService = false;
-    if(_connection != NULL)
+    if(_telsysService != nullptr)
     {
-        gattlib_notification_stop(_connection, &adcUuid );
-        gattlib_notification_stop(_connection, &auxUuid );
-        gattlib_disconnect(_connection);
+        delete _telsysService;
+        _telsysService = nullptr;
     }
-    //_connection = NULL;
+    if(_leController != nullptr)
+    {
+        _leController->disconnectFromDevice();
+        delete _leController;
+        _leController = nullptr;
+    }
 }

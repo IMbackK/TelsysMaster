@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QDebug>
-#include <QThread>
+#include <QBluetoothDeviceDiscoveryAgent>
 
 #define BLE_SCAN_TIMEOUT 4
 
@@ -24,15 +24,11 @@ class BleScanner: public QObject
 {
     Q_OBJECT
 private:
-    bool isScanning = false;
-    void* _adapter;
-
-    QThread* _scannThread = nullptr;
+    QBluetoothDeviceDiscoveryAgent* _agent;
 
 public:
-    BleScanner(void* adapter, bool setInstance = true);
+    BleScanner(QString adapter = "");
     ~BleScanner();
-    static void setNotificationInstance(BleScanner* instance);
     bool getScanning();
 
 
@@ -45,9 +41,8 @@ signals:
     void finishedScanning();
     void discoverdDevice(BleDiscoveredDevice device);
 
-private:
-    void scanningThreadFinished();
-    static void discoverdDeviceCallback(const char* address, const char* name);
+private slots:
+    void discoverdDeviceCallback(const QBluetoothDeviceInfo &info);
 };
 
 #endif // BLESCANNER_H

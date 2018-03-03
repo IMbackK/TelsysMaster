@@ -1,22 +1,23 @@
 #include "plot.h"
 
 #include <QKeySequence>
+#include <QFont>
 
 #include "statisticsdialog.h"
 #include "regressiondiag.h"
 
 Plot::Plot(QWidget* parent):
     QCustomPlot(parent),
-    actionStatistics("Show statistics", this),
-    actionAdd_Regression("Add regression", this),
-    actionDelete_Regression("Delete regression", this),
-    actionExport_Selection("Export selection", this)
+    actionStatistics("Show statistics", nullptr),
+    actionAdd_Regression("Add regression", nullptr),
+    actionDelete_Regression("Delete regression", nullptr),
+    actionExport_Selection("Export selection", nullptr),
+    actionSetValueString("Set Y Axis Label", nullptr)
 {
     xAxis->setLabel("Time [s]");
     yAxis->setLabel(lable);
     xAxis->setRange(0, 10);
     yAxis->setRange(0, 65535);
-    setOpenGl(false);
     addMainGraph();
     setInteraction(QCP::iSelectPlottables, true);
     setInteraction(QCP::iRangeDrag, true);
@@ -43,21 +44,46 @@ Plot::Plot(QWidget* parent):
     addAction(&actionExport_Selection);
 
     //graph context menu
-    graphContextMenu.addAction(&actionStatistics);
-    graphContextMenu.addAction(&actionAdd_Regression);
-    graphContextMenu.addAction(&actionDelete_Regression);
-    graphContextMenu.addAction(&actionExport_Selection);
 
     connect(&actionStatistics, &QAction::triggered, this, &Plot::showStatistics);
     connect(&actionAdd_Regression, &QAction::triggered, this, &Plot::addRegression);
     connect(&actionDelete_Regression, &QAction::triggered, this, &Plot::deleteRegression);
     connect(&actionExport_Selection, &QAction::triggered, this, &Plot::saveCsvDiag);
+    connect(&actionSetValueString, &QAction::triggered, this, &Plot::askForValueString);
 
+#ifdef Q_OS_ANDROID
+
+    graphContextMenu.addAction(&actionStatistics);
+    graphContextMenu.addSeparator();
+    graphContextMenu.addAction(&actionAdd_Regression);
+    graphContextMenu.addSeparator();
+    graphContextMenu.addAction(&actionDelete_Regression);
+    graphContextMenu.addSeparator();
+    graphContextMenu.addAction(&actionSetValueString);
+
+    grabGesture(Qt::TapAndHoldGesture);
+    graphContextMenu.setWindowState(Qt::WindowMaximized);
+    QFont font = graphContextMenu.font();
+    font.setPointSize(24);
+    graphContextMenu.setFont(font);
+#else
+    graphContextMenu.addAction(&actionStatistics);
+    graphContextMenu.addAction(&actionAdd_Regression);
+    graphContextMenu.addAction(&actionDelete_Regression);
+    graphContextMenu.addAction(&actionExport_Selection);
+    graphContextMenu.addAction(&actionSetValueString);
+#endif
 }
 
 Plot::~Plot()
 {
 
+}
+
+bool Plot::event(QEvent *event)
+{
+    if(event->type()==QEvent::Gesture) graphContextMenu.show();
+    return QCustomPlot::event(event);
 }
 
 void Plot::setLable(QString lable)
@@ -83,6 +109,17 @@ void Plot::clear()
     replot();
 }
 
+void Plot::askForValueString()
+{
+    bool ok = false;
+    QString label = QInputDialog::getText(this, "Y Axis Label", "New Label:", QLineEdit::Normal, yAxis->label(), &ok);
+    if(ok)
+    {
+        yAxis->setLabel(label);
+        replot();
+    }
+}
+
 void Plot::setMaxValue(double maxVal)
 {
     yAxis->setRange(0, maxVal);
@@ -106,17 +143,18 @@ void Plot::saveCsv(QString fileName)
         QCPGraphDataContainer::const_iterator begin = graph(0)->data()->at(range.begin());
         QCPGraphDataContainer::const_iterator end = graph(0)->data()->at(range.end());
 
-        std::vector<AdcSample> adcSamples;
-        adcSamples.resize(end-begin);
+        std::vector<double> keys;
+        keys.resize(end-begin);
+
+        std::vector<double> values;
+        values.resize(end-begin);
 
         for (QCPGraphDataContainer::const_iterator item=begin; item != end; ++item)
         {
-            adcSamples[item-begin].id=item-begin;
-            adcSamples[item-begin].timeStamp=item->key*1000000;
-            adcSamples[item-begin].value=item->value;
-            adcSamples[item-begin].deltaTime = 0;
+            keys[item-begin]=item->key*1000000;
+            values[item-begin]=item->value;
         }
-        saveToCsv(fileName, &adcSamples, nullptr);
+        saveToCsv(fileName, keys, values, "Time[us]", lable);
     }
 }
 

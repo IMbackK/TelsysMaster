@@ -11,6 +11,10 @@ RegressionDiag::RegressionDiag(const RegessionCalculator& reg, QWidget *parent) 
     ui->lcdNumber_offset->display(reg.offset);
     ui->lcdNumber_StdError->display(reg.stdError);
     ui->lcdNumbe_count->display((int)reg.xValues.size());
+
+#ifdef Q_OS_ANDROID
+    setWindowState(Qt::WindowMaximized);
+#endif
 }
 
 RegressionDiag::~RegressionDiag()

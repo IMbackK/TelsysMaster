@@ -13,6 +13,10 @@ CallibrationDialog::CallibrationDialog(QWidget *parent) :
 
     connect(ui->pushButton_copyAmp, &QPushButton::clicked, this, &CallibrationDialog::copyAmp);
     connect(ui->pushButton_copyTemp, &QPushButton::clicked, this, &CallibrationDialog::copyTemp);
+
+#ifdef Q_OS_ANDROID
+    setWindowState(Qt::WindowMaximized);
+#endif
 }
 
 CallibrationDialog::~CallibrationDialog()

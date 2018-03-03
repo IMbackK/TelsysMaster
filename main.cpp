@@ -6,21 +6,22 @@
 #include <QLoggingCategory>
 #include <QCommandLineParser>
 #include <functional>
+#include <QBluetoothLocalDevice>
+#include <QBluetoothAddress>
 
 #include "mainwindow.h"
 #include "connectiondialog.h"
 #include "bleserial.h"
 #include "blescanner.h"
-#include "gattlib.h"
 #include "sampleparser.h"
 #include "callibrationdialog.h"
 #include "utilitys.h"
 
 
-void selectDeviceToConnect(void* blteDevice, BleSerial* bleSerial, MainWindow* w)
+void selectDeviceToConnect(BleSerial* bleSerial, MainWindow* w)
 {
 
-    BleScanner scanner(blteDevice);
+    BleScanner scanner;
     ConnectionDialog conDiag(&scanner, w);
 
     QObject::connect(&conDiag, &ConnectionDialog::deviceSelected, bleSerial, &BleSerial::connectTo);
@@ -48,20 +49,25 @@ int main(int argc, char *argv[])
     parser.addOption(adapterOption);
     parser.process(a);
 
-    void* blteDevice;
-    int errorCode = gattlib_adapter_open(parser.isSet(adapterOption) ? parser.value(adapterOption).toLatin1().data() : NULL, &blteDevice);
-    if(errorCode)
-    {
-        QMessageBox::critical(nullptr, "Error", "No active BLTE Adapter Detected.", QMessageBox::Ok);
-        return -1;
-    }
+    MainWindow w;
+    w.show();
 
-    BleSerial bleSerial(blteDevice);
+    QBluetoothLocalDevice* device;
+    if(parser.isSet(adapterOption)) device = new QBluetoothLocalDevice(QBluetoothAddress(parser.value(adapterOption)));
+    else device = new QBluetoothLocalDevice;
+    if(!device->isValid())
+    {
+        QMessageBox::critical(&w, "error", "No Bluetooth device Found", QMessageBox::Ok);
+        delete device;
+        return 1;
+    }
+    device->powerOn();
+    delete device;
+
+    BleSerial bleSerial;
     SampleParser sampleParser;
     bleSerial.setAdcPacketCallback([&sampleParser](const uint8_t *data, size_t length){sampleParser.decodeAdcData(data, length);});
     bleSerial.setAuxPacketCallback([&sampleParser](const uint8_t *data, size_t length){sampleParser.decodeAuxData(data, length);});
-
-    MainWindow w;
 
     std::function<void(std::vector<AdcSample>::iterator, std::vector<AdcSample>::iterator, unsigned, bool)>windowAdcCb =
         [&w](std::vector<AdcSample>::iterator begin, std::vector<AdcSample>::iterator end, unsigned count, bool reLimit)
@@ -72,7 +78,7 @@ int main(int argc, char *argv[])
 
     sampleParser.setAuxSampleCallback([&w](const AuxSample& sample){w.newAuxSample(sample);});
 
-    QObject::connect(&w, &MainWindow::openConnDiag, [&blteDevice, &bleSerial, &w](){selectDeviceToConnect(&blteDevice, &bleSerial, &w);});
+    QObject::connect(&w, &MainWindow::openConnDiag, [&bleSerial, &w](){selectDeviceToConnect(&bleSerial, &w);});
     QObject::connect(&w, &MainWindow::sigClear, &sampleParser, &SampleParser::clear);
     QObject::connect(&w, &MainWindow::sigSaveCsv, &sampleParser, &SampleParser::saveCsv);
     QObject::connect(&w, &MainWindow::sigLoadCsv, &sampleParser, &SampleParser::loadCsv);
@@ -95,6 +101,6 @@ int main(int argc, char *argv[])
     QObject::connect(&calDiag, &CallibrationDialog::sigOffset, &sampleParser, &SampleParser::setOffset);
     QObject::connect(&w, &MainWindow::sigOpenCalDiag, &calDiag, &CallibrationDialog::show);
 
-    w.show();
+
     return a.exec();
 }

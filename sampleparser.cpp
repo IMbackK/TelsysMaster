@@ -55,11 +55,15 @@ void SampleParser::decodeAuxData(const uint8_t *data, size_t length)
         tmp.magn.y = toEquivalentUint16(data+10);
         tmp.magn.z = toEquivalentUint16(data+12);
         tmp.temperature = data[14];
+        tmp.id = _currentAuxSampleId;
         tmp.accelScale =0.00239501953124; //Telemetry System provides 417.533129459 counts per 1 m/s^2
 
+        _currentAuxSampleId++;
         auxTimeStampHead += uCTicksToUs(toEquivalentUint16(data));
 
         if(auxSampleCallback) auxSampleCallback(tmp);
+
+        auxSamples.push_back(tmp);
     }
 }
 
@@ -69,8 +73,8 @@ void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
     {
         int expectedCount = data[0];
         uint_fast8_t totalCount = expectedCount;
-        uint32_t currentDelta = uCTicksToUs(toEquivalentUint16(data+1));
-
+        uint32_t currentDelta = uCTicksToUs(toEquivalentUint16(data+1))*totalCount;
+        qDebug()<<currentDelta;
         for(size_t i = 3; i + 2 <= length && expectedCount > 0; i+=2)
         {
             AdcSample tmp;

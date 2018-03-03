@@ -1,60 +1,45 @@
 #include <QDebug>
 
 #include "blescanner.h"
-#include "gattlib.h"
-#include <QThread>
 #include <QCoreApplication>
+#include <QBluetoothAddress>
+#include <QBluetoothDeviceInfo>
 
-//WARNING: HACK
-//regretably user data support for scanning is not supported by gattlib at this time.
-BleScanner* bleScannerNotifyInstance = nullptr;
-
-BleScanner::BleScanner(void* adapter, bool setInstance): _adapter(adapter)
+BleScanner::BleScanner(QString adapter)
 {
- if(setInstance) bleScannerNotifyInstance = this;
+    if(adapter.size() != 0) _agent = new QBluetoothDeviceDiscoveryAgent(QBluetoothAddress(adapter));
+    else _agent = new QBluetoothDeviceDiscoveryAgent;
+
+     connect(_agent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &BleScanner::discoverdDeviceCallback);
+     connect(_agent, &QBluetoothDeviceDiscoveryAgent::finished, this, &BleScanner::finishedScanning);
 }
 
 BleScanner::~BleScanner()
 {
-    if(bleScannerNotifyInstance == this) bleScannerNotifyInstance = nullptr;
     stop();
+    delete _agent;
 }
 
 void BleScanner::start()
 {
-    qRegisterMetaType<BleDiscoveredDevice>();
-    _scannThread = QThread::create([this](){gattlib_adapter_scan_enable(this->_adapter, &BleScanner::discoverdDeviceCallback,  BLE_SCAN_TIMEOUT);});
-    connect(_scannThread, &QThread::finished, this, &BleScanner::scanningThreadFinished);
-    _scannThread->start();
-}
-
-void BleScanner::scanningThreadFinished()
-{
-    finishedScanning();
-    delete _scannThread;
-    _scannThread = nullptr;
+    _agent->start();
 }
 
 bool BleScanner::getScanning()
 {
-    return isScanning;
+    return _agent->isActive();
 }
 
 void BleScanner::stop()
 {
-    if( _scannThread != nullptr )
+    _agent->stop();
+}
+
+void BleScanner::discoverdDeviceCallback(const QBluetoothDeviceInfo &info)
+{
+    if(info.coreConfigurations() == QBluetoothDeviceInfo::LowEnergyCoreConfiguration)
     {
-       while (_scannThread->isRunning() )QCoreApplication::processEvents();
+        BleDiscoveredDevice newDevice(info.address().toString(), info.name());
+        discoverdDevice(newDevice);
     }
-}
-
-void BleScanner::setNotificationInstance(BleScanner *instance)
-{
-    bleScannerNotifyInstance = instance;
-}
-
-void BleScanner::discoverdDeviceCallback(const char* address, const char* name)
-{
-    BleDiscoveredDevice newDevice(address, name);
-    if(bleScannerNotifyInstance != nullptr)bleScannerNotifyInstance->discoverdDevice(newDevice);
 }

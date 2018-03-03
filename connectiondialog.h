@@ -36,6 +36,7 @@ signals:
 
 private slots:
     void scannFinished();
+    void listItemSelected();
 
 private:
     Ui::ConnectionDialog *ui;

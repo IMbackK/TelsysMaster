@@ -9,7 +9,9 @@
 #include "sampleparser.h"
 #include "bleserial.h"
 
-void saveToCsv(const QString& filename, std::vector<AdcSample>* adcSampels, std::vector<AuxSample>* auxSampels );
+bool saveToCsv(const QString& filename, const std::vector<AdcSample>* adcSampels, const std::vector<AuxSample>* auxSampels );
+
+bool saveToCsv(const QString& filename, const std::vector<double> &keys, const std::vector<double> &values, const QString& keyLable, const QString& valueLable);
 
 void sendStart(BleSerial* bleSerial);
 
