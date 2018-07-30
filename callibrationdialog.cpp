@@ -44,8 +44,6 @@ std::array<double, 10> CallibrationDialog::getSpinBoxValues()
 void CallibrationDialog::accept()
 {
     sigCalValues(getSpinBoxValues());
-
-    sigOffset(ui->doubleSpinBox_offset->value());
     done(0);
 }
 

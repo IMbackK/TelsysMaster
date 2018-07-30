@@ -33,7 +33,9 @@ uint16_t SampleParser::toEquivalentUint16(const uint8_t *data)
 
 void SampleParser::resendRange(unsigned int from, unsigned int to)
 {
-    if(adcSampleCallback) adcSampleCallback(adcSamples.begin()+from, adcSamples.begin()+to, adcSamples.size(), true);
+    if(from > adcSamples.size()-1) from = adcSamples.size() - 1;
+    if(to > adcSamples.size()) to = adcSamples.size();
+    if(adcSampleCallback && adcSamples.size() > 0) adcSampleCallback(adcSamples.begin()+from, adcSamples.begin()+to, adcSamples.size(), true);
 }
 
 
@@ -83,7 +85,9 @@ void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
             tmp.id = _currentAdcSampleId;
 
             tmp.timeStamp=adcTimeStampHead+tmp.deltaTime*(totalCount-expectedCount);
-            tmp.value = tmp.value*_offset;
+            tmp.value = tmp.value;
+            tmp.scale = _scale;
+            tmp.offset = _offset;
 
             if(adcSamples.size() > sampleCountLimit-1) adcSamples.erase(adcSamples.begin()); //limit samples
             adcSamples.push_back(tmp);
@@ -97,13 +101,29 @@ void SampleParser::decodeAdcData(const uint8_t *data, size_t length)
     }
 }
 
-void SampleParser::setOffset(double offset)
+void SampleParser::setOffset(float offset, bool futureOnly)
 {
-    for(unsigned int i = 0; i < adcSamples.size(); i++)
+    if(!futureOnly)for(unsigned int i = 0; i < adcSamples.size(); i++)
     {
-        adcSamples[i].value = (adcSamples[i].value/_offset)*offset;
+        adcSamples[i].offset = offset;
     }
     _offset = offset;
+}
+
+void SampleParser::setScale(float scale, bool futureOnly)
+{
+    if(!futureOnly)for(unsigned int i = 0; i < adcSamples.size(); i++)
+    {
+        adcSamples[i].scale = scale;
+    }
+    scale = scale;
+}
+
+void SampleParser::setScaleAndOffset(float scale, float offset, bool futureOnly)
+{
+    qDebug()<<"scaling";
+    setScale(scale,futureOnly);
+    setOffset(offset,futureOnly);
 }
 
 void SampleParser::saveCsv(QString fileName)
@@ -118,7 +138,9 @@ void SampleParser::loadCsv(QString fileName)
     {
         clear();
         QTextStream fileStream(&file);
-        fileStream.readLine();
+        QStringList headerTokens = fileStream.readLine().split(',');
+        bool hasScaleAndOffset = false;
+        if(headerTokens.size() >= 4) hasScaleAndOffset = (headerTokens[3] == "SCALE" && headerTokens[4] == "OFFSET");
         unsigned int count = 0;
         while(!fileStream.atEnd())
         {
@@ -129,6 +151,8 @@ void SampleParser::loadCsv(QString fileName)
                 tmp.id = count;
                 tmp.timeStamp = currentlineTokens[0].toULong();
                 tmp.value = currentlineTokens[1].toULong();
+                tmp.offset = 0;
+                tmp.scale = 1;
                 adcSamples.size() == 0 ? tmp.deltaTime = tmp.timeStamp : tmp.deltaTime = tmp.timeStamp - adcSamples.back().timeStamp;
                 adcSamples.push_back(tmp);
             }
@@ -138,6 +162,16 @@ void SampleParser::loadCsv(QString fileName)
                 tmp.id = currentlineTokens[0].toULong();
                 tmp.timeStamp = currentlineTokens[1].toULong();
                 tmp.value = currentlineTokens[2].toULong();
+                if(currentlineTokens.size() <= 5 || !hasScaleAndOffset)
+                {
+                    tmp.offset = 0;
+                    tmp.scale = 1;
+                }
+                else
+                {
+                    tmp.scale = currentlineTokens[3].toFloat();
+                    tmp.offset = currentlineTokens[4].toFloat();
+                }
                 adcSamples.size() == 0 ? tmp.deltaTime = tmp.timeStamp : tmp.deltaTime = tmp.timeStamp - adcSamples.back().timeStamp;
                 adcSamples.push_back(tmp);
             }

@@ -27,7 +27,6 @@ private slots:
     void copyTemp();
 
 signals:
-    void sigOffset(double offset);
     void sigCalValues(std::array<double, 10> values);
 
 private:

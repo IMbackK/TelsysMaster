@@ -42,6 +42,7 @@ signals:
     void sigRecalOfset();
     void sigSetRate(int rate);
     void sigSampleLimit(int limit);
+    void sigScaleAndOffset(double scale, double offset, bool futureOnly);
 
 
 public slots:
@@ -49,8 +50,8 @@ public slots:
     void deviceConnectionInProgress();
     void deviceDisconnected();
     void connectionFailed(QString errorMsg);
-    void setGraphLimit(double in);
     void showRateDialog();
+    void setScaleAndOffset(double scale, double offset);
 
 private slots:
 
@@ -63,6 +64,8 @@ private slots:
     //dialogs
     void showLimitDialog();
     void replot();
+    void showScaleOffsetDialog();
+    void showAboutDiag();
 
     void tabChanged();
 

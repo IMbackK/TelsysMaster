@@ -15,11 +15,11 @@ bool saveToCsv(const QString& filename, const std::vector<AdcSample>* adcSamples
     if(file.open(QIODevice::WriteOnly | QIODevice::Text) && adcSamples != nullptr)
     {
         QTextStream fileStream(&file);
-        if(auxSamples != nullptr)fileStream<<"ID,TIMESTAMP,ADCVALUE,,ID,TIMESTAMP,ACC X,ACC Y,ACC Z,MGN X,MGN Y, MGN Z,TEMP\n";
+        if(auxSamples != nullptr)fileStream<<"ID,TIMESTAMP,ADCVALUE,SCALE,OFFSET,,ID,TIMESTAMP,ACC X,ACC Y,ACC Z,MGN X,MGN Y, MGN Z,TEMP\n";
         else fileStream<<"ID,TIMESTAMP,ADCVALUE\n";
         for(unsigned int i = 0; i < adcSamples->size(); i++)
         {
-            fileStream<<adcSamples->at(i).id<<','<<adcSamples->at(i).timeStamp<<','<<adcSamples->at(i).value;
+            fileStream<<adcSamples->at(i).id<<','<<adcSamples->at(i).timeStamp<<','<<adcSamples->at(i).value<<','<<adcSamples->at(i).scale<<','<<adcSamples->at(i).offset;
             if(auxSamples != nullptr && i < auxSamples->size())
             {
                 fileStream<<",,"<<auxSamples->at(i).id<<','<<auxSamples->at(i).timeStamp<<','
@@ -51,7 +51,7 @@ bool saveToCsv(const QString& filename, const std::vector<double> &keys, const s
         fileStream<<"id"<<','<<keyLable<<','<<valueLable<<'\n';
         for(size_t i = 0; i < keys.size(); i++)
         {
-            fileStream<<i<<','<<keys[i]<<','<<values[i]<<'\n';
+            fileStream<<i<<','<<(int64_t)keys[i]<<','<<values[i]<<'\n';
         }
         fileStream.flush();
         file.close();

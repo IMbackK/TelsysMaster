@@ -16,7 +16,14 @@ public:
     uint32_t deltaTime;
     uint64_t timeStamp;
     uint64_t id;
-    double scale = 1;
+    float offset;
+    float scale;
+
+inline double getScaledValue() const
+{
+    return (value+offset) * scale;
+}
+
 };
 
 class AuxSample
@@ -36,10 +43,11 @@ class SampleParser : public QObject
     Q_OBJECT
 private:
 
+    float _scale = 1;
+    float _offset = 0;
+
     uint64_t adcTimeStampHead = 0;
     uint64_t auxTimeStampHead = 0;
-
-    double _offset = 1.0;
 
     uint64_t _currentAdcSampleId = 0;
     uint64_t _currentAuxSampleId = 0;
@@ -66,7 +74,9 @@ public:
 
 public slots:
     void clear();
-    void setOffset(double offset);
+    void setOffset(float offset, bool futureOnly = false);
+    void setScale(float scale, bool futureOnly = false);
+    void setScaleAndOffset(float scale, float offset, bool futureOnly = false);
     void resendRange(unsigned int from, unsigned int to);
     void saveCsv(QString fileName);
     void loadCsv(QString fileName);

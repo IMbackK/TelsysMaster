@@ -8,7 +8,7 @@
 #include <QFileDialog>
 #include <QPen>
 #include <QColor>
-#include <replotdiag.h>
+
 
 #ifdef Q_OS_ANDROID
 #include <QAndroidJniObject>
@@ -16,9 +16,11 @@
 
 #include "plot.h"
 
+#include "replotdiag.h"
 #include "limitdialog.h"
 #include "ratedialog.h"
-
+#include "scaleoffsetdiag.h"
+#include "abouttelsys.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -26,8 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->plot->setLable("ADC Value");
-    ui->plot_accl->setLable("Accelleration [m/s^2]");
+    ui->plot->setLabel("ADC Value");
+    ui->plot_accl->setLabel("Accelleration [m/s^2]");
 
     ui->plot_accl->setMaxValue(100);
 
@@ -44,6 +46,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionRecalibrate_Offset, &QAction::triggered, this, &MainWindow::sigRecalOfset);
     connect(ui->actionRates, &QAction::triggered, this, &MainWindow::showRateDialog);
     connect(ui->actionAbout_Qt, &QAction::triggered, this, [this](){QMessageBox::aboutQt(this);});
+    connect(ui->actionScale_and_Offset, &QAction::triggered, this, &MainWindow::showScaleOffsetDialog);
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAboutDiag);
 
     //buttons
     connect(ui->pushButton_Connect, &QAbstractButton::clicked, this, &MainWindow::openConnDiag);
@@ -58,13 +62,22 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //submenus dont work sanely on android
 #ifdef Q_OS_ANDROID
+
+    ui->actionSave_CSV->setText("CSV");
+    ui->actionSave_PNG->setText("PDF");
+    ui->actionRecalibrate_Offset->setText("Recal");
+    ui->actionCalibration->setText("Cal");
+    ui->actionScale_and_Offset->setText("Scl&Ofst");
+
     ui->menuBar->addAction(ui->actionSave_CSV);
     ui->menuBar->addAction(ui->actionSave_PNG);
     ui->menuBar->addAction(ui->actionRecalibrate_Offset);
     ui->menuBar->addAction(ui->actionCalibration);
+     ui->menuBar->addAction(ui->actionScale_and_Offset);
     ui->menuBar->addAction(ui->actionReplot);
     ui->menuBar->addAction(ui->actionRates);
     ui->menuBar->addAction(ui->actionClear);
+    ui->menuBar->addAction(ui->actionAbout);
 
     ui->menuBar->removeAction(ui->menuConfigure->menuAction());
     ui->menuBar->removeAction(ui->menuhello->menuAction());
@@ -78,6 +91,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->label_LatestAuxSample->hide();
     ui->label_LatestSample->hide();
     ui->menuBar->setNativeMenuBar(false);
+
 #endif
 
 }
@@ -88,9 +102,10 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::setGraphLimit(double in)
+void MainWindow::setScaleAndOffset(double scale, double offset)
 {
-    ui->plot->yAxis->setRange(0, 65535*in);
+    ui->plot->yAxis->setRange(offset*scale, (65535+offset)*scale);
+    sigReplot(0, sampleMemoryLimit);
     ui->plot->replot();
 }
 
@@ -105,6 +120,7 @@ void MainWindow::deviceConnected()
     ui->actionRates->setEnabled(true);
     ui->actionRecalibrate_Offset->setEnabled(true);
     ui->actionLoad_CSV->setEnabled(false);
+    ui->actionCalibration->setEnabled(true);
     wasConnected = true;
     clearGraphs();
     sigClear();
@@ -120,7 +136,7 @@ void MainWindow::deviceDisconnected()
     ui->pushButton_Reset->setEnabled(false);
     ui->pushButton_Reset->setEnabled(false);
     ui->actionLoad_CSV->setEnabled(true);
-
+    ui->actionCalibration->setEnabled(false);
     ui->actionRates->setEnabled(false);
     ui->actionRecalibrate_Offset->setEnabled(false);
 }
@@ -176,7 +192,7 @@ void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vect
     #ifndef Q_OS_ANDROID
     QString buffer;
     QTextStream ss(&buffer);
-    ss<<"id: "<<(end-1)->id<<"  Value: "<<(end-1)->value<<"  dt: "<<(end-1)->deltaTime<<"  timestamp: "<<(end-1)->timeStamp;
+    ss<<"id: "<<(end-1)->id<<"  Value: "<<(end-1)->getScaledValue()<<"  dt: "<<(end-1)->deltaTime<<"  timestamp: "<<(end-1)->timeStamp;
     ui->label_LatestSample->setText(buffer);
     #endif
 
@@ -187,11 +203,12 @@ void MainWindow::newAdcSamples(std::vector<AdcSample>::iterator begin, std::vect
     for(std::vector<AdcSample>::iterator item = ((end-begin) > ui->plot->getLimit() && !reLimit) ? end-ui->plot->getLimit() : begin; item < end; ++item)
     {
         keys.push_back(item->timeStamp/(double)1000000);
-        values.push_back(item->value);
+        values.push_back(item->getScaledValue());
     }
 
     ui->plot->addData(keys, values, true, reLimit);
     if(!ui->tab->isHidden())ui->plot->replot(QCustomPlot::rpQueuedRefresh);
+    
 }
 
 void MainWindow::showLimitDialog()
@@ -226,6 +243,33 @@ void MainWindow::showRateDialog()
     }
 }
 
+void MainWindow::showAboutDiag()
+{
+    AboutTelsys aboutDiag(this);
+    aboutDiag.show();
+    aboutDiag.exec();
+}
+
+void MainWindow::showScaleOffsetDialog()
+{
+    ScaleOffsetDiag scaleDiag(this);
+    scaleDiag.show();
+    if(scaleDiag.exec() == 0)
+    {
+        setScaleAndOffset(scaleDiag.getScale(), scaleDiag.getOffset());
+        if(!scaleDiag.isManual()) ui->plot->setLabel("Deflection [mV/V]");
+        ui->plot->replot();
+        if(scaleDiag.rescale())
+        {
+            uint64_t sampleNumber = ui->lcdNumber_Samples->value();
+            sigScaleAndOffset(scaleDiag.getScale(), scaleDiag.getOffset(), false);
+            clearGraphs();
+            sigReplot(0, sampleNumber);
+        }
+        else sigScaleAndOffset(scaleDiag.getScale(), scaleDiag.getOffset(), true);
+    }
+}
+
 void MainWindow::tabChanged()
 {
     ui->plot->replot();
@@ -243,7 +287,7 @@ void MainWindow::savePdf()
     QMessageBox::information(this, "Saved", "saved to "+fileName, QMessageBox::Ok);
 
 #else
-    QString fileName = QFileDialog::getSaveFileName(this, "Save CSV", "./", "*.csv" );
+    QString fileName = QFileDialog::getSaveFileName(this, "Save graph as PDF", "./", "*.pdf" );
 #endif
 
     if(!fileName.isEmpty())
@@ -264,7 +308,7 @@ void MainWindow::saveCsv()
     QMessageBox::information(this, "Saved", "saved to "+fileName, QMessageBox::Ok);
 
 #else
-    QString fileName = QFileDialog::getSaveFileName(this, "Save graph as PDF", "./", "*.pdf" );
+    QString fileName = QFileDialog::getSaveFileName(this, "Save CSV", "./", "*.csv" );
 #endif
     if(!fileName.isEmpty()) sigSaveCsv(fileName);
 }

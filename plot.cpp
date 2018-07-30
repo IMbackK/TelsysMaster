@@ -15,7 +15,7 @@ Plot::Plot(QWidget* parent):
     actionSetValueString("Set Y Axis Label", nullptr)
 {
     xAxis->setLabel("Time [s]");
-    yAxis->setLabel(lable);
+    yAxis->setLabel("ADC Value");
     xAxis->setRange(0, 10);
     yAxis->setRange(0, 65535);
     addMainGraph();
@@ -86,10 +86,9 @@ bool Plot::event(QEvent *event)
     return QCustomPlot::event(event);
 }
 
-void Plot::setLable(QString lable)
+void Plot::setLabel(QString label)
 {
-    this->lable = lable;
-    yAxis->setLabel(lable);
+    yAxis->setLabel(label);
 }
 
 void Plot::addMainGraph()
@@ -115,7 +114,7 @@ void Plot::askForValueString()
     QString label = QInputDialog::getText(this, "Y Axis Label", "New Label:", QLineEdit::Normal, yAxis->label(), &ok);
     if(ok)
     {
-        yAxis->setLabel(label);
+        setLabel(label);
         replot();
     }
 }
@@ -154,7 +153,7 @@ void Plot::saveCsv(QString fileName)
             keys[item-begin]=item->key*1000000;
             values[item-begin]=item->value;
         }
-        saveToCsv(fileName, keys, values, "Time[us]", lable);
+        saveToCsv(fileName, keys, values, "Time[us]", yAxis->label());
     }
 }
 

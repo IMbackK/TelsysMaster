@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/images">
+        <file alias="Icon">res/TelsysIcon.png</file>
+        <file alias="Logo">res/TelsysLogo.png</file>
+    </qresource>
+</RCC>

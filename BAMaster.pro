@@ -17,6 +17,8 @@ TEMPLATE = app
 # deprecated API in order to know how to port your code away from it.
 DEFINES += QT_DEPRECATED_WARNINGS
 
+DEFINES += QCUSTOMPLOT_USE_OPENGL
+
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
@@ -38,7 +40,9 @@ SOURCES += \
     utilitys.cpp \
     regessioncalculator.cpp \
     plot.cpp \
-    regressiondiag.cpp
+    regressiondiag.cpp \
+    scaleoffsetdiag.cpp \
+    abouttelsys.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -56,7 +60,9 @@ HEADERS += \
     utilitys.h \
     regessioncalculator.h \
     plot.h \
-    regressiondiag.h
+    regressiondiag.h \
+    scaleoffsetdiag.h \
+    abouttelsys.h
 
 FORMS += \
         mainwindow.ui \
@@ -66,7 +72,9 @@ FORMS += \
     replotdiag.ui \
     ratedialog.ui \
     statisticsdialog.ui \
-    regressiondiag.ui
+    regressiondiag.ui \
+    scaleoffsetdiag.ui \
+    abouttelsys.ui
 
 DISTFILES += \
     android/AndroidManifest.xml \
@@ -78,3 +86,6 @@ DISTFILES += \
     android/gradlew.bat
 
 ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
+
+RESOURCES += \
+    resources.qrc

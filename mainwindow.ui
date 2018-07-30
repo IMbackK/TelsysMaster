@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>1057</width>
     <height>600</height>
    </rect>
   </property>
@@ -18,6 +18,10 @@
   </property>
   <property name="windowTitle">
    <string>UVOS TELSYS</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/images/Icon</normaloff>:/images/Icon</iconset>
   </property>
   <property name="tabShape">
    <enum>QTabWidget::Rounded</enum>
@@ -130,7 +134,7 @@
       </widget>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
-        <string>Auxiliary Information</string>
+        <string>Accelerometer</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1">
         <item>
@@ -277,7 +281,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1057</width>
      <height>32</height>
     </rect>
    </property>
@@ -294,7 +298,6 @@
     <property name="title">
      <string>Co&amp;nfigure</string>
     </property>
-    <addaction name="actionLimits"/>
     <addaction name="actionCalibration"/>
     <addaction name="actionRecalibrate_Offset"/>
     <addaction name="actionRates"/>
@@ -303,7 +306,9 @@
     <property name="title">
      <string>Sa&amp;mples</string>
     </property>
+    <addaction name="actionLimits"/>
     <addaction name="actionReplot"/>
+    <addaction name="actionScale_and_Offset"/>
     <addaction name="separator"/>
     <addaction name="actionClear"/>
    </widget>
@@ -311,8 +316,8 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout"/>
+    <addaction name="actionAbout_Qt"/>
     <addaction name="separator"/>
     <addaction name="actionDocumentation"/>
    </widget>
@@ -370,7 +375,7 @@
   </action>
   <action name="actionCalibration">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>&amp;Calibration</string>
@@ -410,6 +415,11 @@
     <string>Recalibrate &amp;Offset</string>
    </property>
   </action>
+  <action name="actionScale_and_Offset">
+   <property name="text">
+    <string>&amp;Scale and Offset</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -420,6 +430,8 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

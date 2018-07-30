@@ -29,13 +29,11 @@ private:
     QAction actionExport_Selection;
     QAction actionSetValueString;
 
-    QString lable = "Value";
-
 public:
     Plot(QWidget* parent = nullptr);
     ~Plot();
 
-    void setLable(QString lable);
+    void setLabel(QString label);
 
     void clear();
     void setLimit(unsigned graphPointLimit);
